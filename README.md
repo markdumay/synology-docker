@@ -2,7 +2,7 @@
 
 <!-- Tagline -->
 <p align="center">
-    <b>Update or restore Docker Engine and Docker Compose on Synology NAS</b>
+    <b>Update or Restore Docker Engine and Docker Compose on Synology NAS</b>
     <br />
 </p>
 
