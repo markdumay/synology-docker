@@ -328,7 +328,7 @@ execute_extract_bin() {
 
 # Extract target Docker binary
 execute_extract_backup() {
-    print_status "Extracting Docker backup ($WORKING_DIR/$DOCKER_BACKUP_FILENAME)"
+    print_status "Extracting Docker backup ($DOCKER_BACKUP_FILENAME)"
     BASEPATH=$(dirname "$DOCKER_BACKUP_FILENAME")
     FILENAME=$(basename "$DOCKER_BACKUP_FILENAME") 
     cd "$BASEPATH"
