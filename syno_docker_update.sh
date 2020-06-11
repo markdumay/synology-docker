@@ -28,8 +28,7 @@ SYNO_DOCKER_BIN_PATH=$SYNO_DOCKER_DIR/target/usr
 SYNO_DOCKER_BIN=$SYNO_DOCKER_BIN_PATH/bin
 SYNO_DOCKER_JSON_PATH=$SYNO_DOCKER_DIR/etc
 SYNO_DOCKER_JSON=$SYNO_DOCKER_JSON_PATH/dockerd.json
-SYNO_DOCKER_JSON_CONFIG="
-{
+SYNO_DOCKER_JSON_CONFIG="{
     ""data-root"" : ""$SYNO_DOCKER_DIR/target/docker"",
     ""log-driver"" : ""json-file"",
     ""registry-mirrors"" : [],
