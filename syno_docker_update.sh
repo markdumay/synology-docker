@@ -32,7 +32,7 @@ SYNO_DOCKER_JSON_CONFIG="{
     \"data-root\" : \"$SYNO_DOCKER_DIR/target/docker\",
     \"log-driver\" : \"json-file\",
     \"registry-mirrors\" : [],
-    \"group"": ""administrators\"
+    \"group\": \"administrators\"
 }"
 
 
