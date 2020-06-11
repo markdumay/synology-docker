@@ -391,8 +391,9 @@ execute_restore_bin() {
 execute_update_log() {
     print_status "Configuring log driver"
     if [ "$STAGE" == 'false' ] ; then
-        if [ ! -f "$SYNO_DOCKER_JSON" ] || grep "json-file" "$SYNO_DOCKER_JSON" -q ; then
-            mkdir -p "$SYNO_DOCKER_DIR/etc/"
+        LOG_DRIVER=$(grep "json-file" "$SYNO_DOCKER_JSON")
+        if [ ! -f "$SYNO_DOCKER_JSON" ] || [ -z "$LOG_DRIVER" ] ; then
+            mkdir -p "$SYNO_DOCKER_JSON_PATH"
             printf "$SYNO_DOCKER_JSON_CONFIG" > "$SYNO_DOCKER_JSON"
         fi
     else
