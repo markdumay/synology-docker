@@ -584,8 +584,8 @@ case "$COMMAND" in
         detect_current_versions
         execute_prepare
         define_restore
-        execute_stop_syno
         execute_extract_backup
+        execute_stop_syno
         execute_restore_bin
         execute_restore_log
         execute_start_syno

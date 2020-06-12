@@ -92,9 +92,9 @@ Under the hood, the five different commands invoke a specific workflow or sequen
 |--------------------------------|--------|----------|---------|---------|--------|
 | A) Download Docker binary      |        | Step 1   |         |         | Step 1 |
 | B) Download Compose binary     |        | Step 2   |         |         | Step 2 |
-| C) Stop Docker daemon          | Step 1 |          | Step 1  | Step 1  | Step 3 |
+| C) Stop Docker daemon          | Step 1 |          | Step 1  | Step 2  | Step 3 |
 | D) Backup current files        | Step 2 |          | Step 2  |         | Step 4 |
-| E) Extract files from backup   |        |          |         | Step 2  |        |
+| E) Extract files from backup   |        |          |         | Step 1  |        |
 | F) Extract downloaded binaries |        |          | Step 3  |         | Step 5 |
 | G) Restore Docker binaries     |        |          |         | Step 3  |        |
 | H) Install Docker binaries     |        |          | Step 4  |         | Step 6 |
