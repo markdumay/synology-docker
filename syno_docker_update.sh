@@ -216,10 +216,10 @@ validate_backup_filename() {
     # split into directory and filename if applicable
     # TODO: test
     BASEPATH=$(dirname "$DOCKER_BACKUP_FILENAME")
-    FILENAME=$(basename "$DOCKER_BACKUP_FILENAME") 
     if [ -z "$BASEPATH" ] || [ "$BASEPATH" != "." ]; then
-        BACKUP_DIR="$BASEPATH"
-        DOCKER_BACKUP_FILENAME="$FILENAME"
+        ABS_PATH_AND_FILE=$(readlink -f "$DOCKER_BACKUP_FILENAME")
+        BACKUP_DIR=$(dirname "$ABS_PATH_AND_FILE")
+        DOCKER_BACKUP_FILENAME=$(basename "$ABS_PATH_AND_FILE") 
     fi
 }
 
@@ -231,10 +231,8 @@ validate_provided_download_path() {
         terminate "$1"
     fi
 
-    # cut trailing '/'
-    if [ "${DOWNLOAD_DIR:0-1}" == "/" ] ; then
-        DOWNLOAD_DIR="${DOWNLOAD_DIR%?}"
-    fi
+    # cut trailing '/' and convert to absolute path
+    DOWNLOAD_DIR=$(readlink -f "$DOWNLOAD_DIR")
 
     # check PATH exists
     if [ ! -d "$DOWNLOAD_DIR" ] ; then
@@ -251,10 +249,8 @@ validate_provided_backup_path() {
         terminate "$1"
     fi
 
-    # cut trailing '/'
-    if [ "${BACKUP_DIR:0-1}" == "/" ] ; then
-        BACKUP_DIR="${BACKUP_DIR%?}"
-    fi
+    # cut trailing '/' and convert to absolute path
+    BACKUP_DIR=$(readlink -f "$BACKUP_DIR")
 
     # check PATH exists
     if [ ! -d "$BACKUP_DIR" ] ; then
