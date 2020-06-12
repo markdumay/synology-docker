@@ -19,6 +19,8 @@ GREEN='\033[0;32m' # Green color
 NC='\033[0m' # No Color
 BOLD='\033[1m' #Bold color
 DSM_SUPPORTED_VERSION=6
+DEFAULT_DOCKER_VERSION='19.03.11'
+DEFAULT_COMPOSE_VERSION='1.26.0'
 DOWNLOAD_DOCKER=https://download.docker.com/linux/static/stable/x86_64
 DOWNLOAD_GITHUB=https://github.com/docker/compose
 GITHUB_RELEASES=/docker/compose/releases/tag
@@ -146,6 +148,11 @@ detect_available_versions() {
         LATEST_DOCKER_BIN=$(echo "$DOCKER_BIN_FILES" | sort -bt. -k1,1 -k2,2n -k3,3n -k4,4n -k5,5n | tail -1)
         LATEST_DOCKER_VERSION=$(echo "$LATEST_DOCKER_BIN" | sed "s/docker-//g" | sed "s/.tgz//g" )
         TARGET_DOCKER_VERSION=$LATEST_DOCKER_VERSION
+
+        if [ -z "$TARGET_DOCKER_VERSION" ] ; then
+            echo "Could not detect Docker versions available for download, setting default value"
+            TARGET_DOCKER_VERSION="$DEFAULT_DOCKER_VERSION"
+        fi
     fi
 
     # Detect latest available stable Docker Compose version (ignores release candidates)
@@ -153,6 +160,11 @@ detect_available_versions() {
         COMPOSE_TAGS=$(curl -s "$DOWNLOAD_GITHUB/tags" | egrep "a href=\"$GITHUB_RELEASES/[0-9]+.[0-9]+.[0-9]+\"")
         LATEST_COMPOSE_VERSION=$(echo "$COMPOSE_TAGS" | head -1 | cut -c 45- | sed "s/\">//g")
         TARGET_COMPOSE_VERSION=$LATEST_COMPOSE_VERSION
+
+        if [ -z "$TARGET_COMPOSE_VERSION" ] ; then
+            echo "Could not detect Docker Compose versions available for download, setting default value"
+            TARGET_COMPOSE_VERSION="$DEFAULT_COMPOSE_VERSION"
+        fi
     fi
 }
 
@@ -254,7 +266,6 @@ define_target_version() {
 }
 
 define_target_download() {
-    
     detect_available_downloads
     echo "Target Docker version: $(printf ${TARGET_DOCKER_VERSION:-Unknown})"
     echo "Target Docker Compose version: Unknown"
