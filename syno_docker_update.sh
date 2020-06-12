@@ -246,7 +246,7 @@ validate_provided_download_path() {
 # Validates provided path is available
 validate_provided_backup_path() {
     # check PATH is provided
-    if [ -z "$BACKUP_DIR" ] || [ "${$BACKUP_DIR:0:1}" == "-" ] ; then
+    if [ -z "$BACKUP_DIR" ] || [ "${BACKUP_DIR:0:1}" == "-" ] ; then
         usage
         terminate "$1"
     fi
