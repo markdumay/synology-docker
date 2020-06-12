@@ -88,12 +88,12 @@ sudo ./syno_docker_update.sh [OPTIONS] COMMAND
 | **`update`**    |           | Update Docker and Docker Compose to a target version (creates a backup first) |
 
 Under the hood, the five different commands invoke a specific workflow or sequence of steps. The below table shows the workflows and the order of steps for each of the commands.
-| Workflow step               | backup | download | install | restore | update |
-|-----------------------------|--------|----------|---------|---------|--------|
+| Workflow step                  | backup | download | install | restore | update |
+|--------------------------------|--------|----------|---------|---------|--------|
 | A) Download Docker binary      |        | Step 1   |         |         | Step 1 |
 | B) Download Compose binary     |        | Step 2   |         |         | Step 2 |
 | C) Stop Docker daemon          | Step 1 |          | Step 1  | Step 1  | Step 3 |
-| D) ackup current files        | Step 2 |          | Step 2  |         | Step 4 |
+| D) Backup current files        | Step 2 |          | Step 2  |         | Step 4 |
 | E) Extract files from backup   |        |          |         | Step 2  |        |
 | F) Extract downloaded binaries |        |          | Step 3  |         | Step 5 |
 | G) Restore Docker binaries     |        |          |         | Step 3  |        |
