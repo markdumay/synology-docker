@@ -355,6 +355,11 @@ execute_extract_bin() {
     if [ "$SKIP_DOCKER_UPDATE" == 'false' ] ; then
         TARGET_DOCKER_BIN="docker-$TARGET_DOCKER_VERSION.tgz"
         print_status "Extracting target Docker binary ($DOWNLOAD_DIR/$TARGET_DOCKER_BIN)"
+
+        if [ ! -f "$DOWNLOAD_DIR/$TARGET_DOCKER_BIN" ] ; then
+            terminate "Docker binary archive not found"
+        fi
+
         cd "$TEMP_DIR"
         tar -zxvf "$DOWNLOAD_DIR/$TARGET_DOCKER_BIN"
         if [ ! -d "docker" ] ; then 
@@ -367,6 +372,11 @@ execute_extract_bin() {
 # TODO: fix
 execute_extract_backup() {
     print_status "Extracting Docker backup ($BACKUP_DIR/$DOCKER_BACKUP_FILENAME)"
+
+    if [ ! -f "$BACKUP_DIR/$DOCKER_BACKUP_FILENAME" ] ; then
+        terminate "Backup file not found"
+    fi
+
     cd "$TEMP_DIR"
     tar -zxvf "$BACKUP_DIR/$DOCKER_BACKUP_FILENAME"
     mv bin docker
