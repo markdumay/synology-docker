@@ -4,8 +4,8 @@
 # Title         : syno_docker_update.sh
 # Description   : Updates or restores Docker Engine and Docker Compose on Synology to target version
 # Author        : Mark Dumay
-# Date          : June 11th, 2020
-# Version       : 1.0.1
+# Date          : June 12th, 2020
+# Version       : 1.0.2
 # Usage         : sudo ./syno_docker_update.sh [OPTIONS] COMMAND
 # Repository    : https://github.com/markdumay/synology-docker.git
 # Comments      : Inspired by https://gist.github.com/Mikado8231/bf207a019373f9e539af4d511ae15e0d
