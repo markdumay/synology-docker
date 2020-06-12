@@ -226,7 +226,7 @@ validate_backup_filename() {
 # Validates provided path is available
 validate_provided_download_path() {
     # check PATH is provided
-    if [ -z "$DOWNLOAD_DIR" ] || [ "${$DOWNLOAD_DIR:0:1}" == "-" ] ; then
+    if [ -z "$DOWNLOAD_DIR" ] || [ "${DOWNLOAD_DIR:0:1}" == "-" ] ; then
         usage
         terminate "$1"
     fi
