@@ -4,8 +4,8 @@
 # Title         : syno_docker_update.sh
 # Description   : Updates or restores Docker Engine and Docker Compose on Synology to target version
 # Author        : Mark Dumay
-# Date          : June 4th, 2020
-# Version       : 1.0
+# Date          : June 11th, 2020
+# Version       : 1.0.1
 # Usage         : sudo ./syno_docker_update.sh [OPTIONS] COMMAND
 # Repository    : https://github.com/markdumay/synology-docker.git
 # Comments      : Inspired by https://gist.github.com/Mikado8231/bf207a019373f9e539af4d511ae15e0d
@@ -28,12 +28,11 @@ SYNO_DOCKER_BIN_PATH=$SYNO_DOCKER_DIR/target/usr
 SYNO_DOCKER_BIN=$SYNO_DOCKER_BIN_PATH/bin
 SYNO_DOCKER_JSON_PATH=$SYNO_DOCKER_DIR/etc
 SYNO_DOCKER_JSON=$SYNO_DOCKER_JSON_PATH/dockerd.json
-SYNO_DOCKER_JSON_CONFIG="
-{
-    ""data-root"" : ""$SYNO_DOCKER_DIR/target/docker"",
-    ""log-driver"" : ""json-file"",
-    ""registry-mirrors"" : [],
-    ""group"": ""administrators""
+SYNO_DOCKER_JSON_CONFIG="{
+    \"data-root\" : \"$SYNO_DOCKER_DIR/target/docker\",
+    \"log-driver\" : \"json-file\",
+    \"registry-mirrors\" : [],
+    \"group\": \"administrators\"
 }"
 
 
@@ -329,7 +328,7 @@ execute_extract_bin() {
 
 # Extract target Docker binary
 execute_extract_backup() {
-    print_status "Extracting Docker backup ($WORKING_DIR/$DOCKER_BACKUP_FILENAME)"
+    print_status "Extracting Docker backup ($DOCKER_BACKUP_FILENAME)"
     BASEPATH=$(dirname "$DOCKER_BACKUP_FILENAME")
     FILENAME=$(basename "$DOCKER_BACKUP_FILENAME") 
     cd "$BASEPATH"
@@ -391,8 +390,9 @@ execute_restore_bin() {
 execute_update_log() {
     print_status "Configuring log driver"
     if [ "$STAGE" == 'false' ] ; then
-        if [ ! -f "$SYNO_DOCKER_JSON" ] || grep "json-file" "$SYNO_DOCKER_JSON" -q ; then
-            mkdir -p "$SYNO_DOCKER_DIR/etc/"
+        LOG_DRIVER=$(grep "json-file" "$SYNO_DOCKER_JSON")
+        if [ ! -f "$SYNO_DOCKER_JSON" ] || [ -z "$LOG_DRIVER" ] ; then
+            mkdir -p "$SYNO_DOCKER_JSON_PATH"
             printf "$SYNO_DOCKER_JSON_CONFIG" > "$SYNO_DOCKER_JSON"
         fi
     else
