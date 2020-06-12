@@ -114,7 +114,7 @@ Under the hood, the five different commands invoke a specific workflow or sequen
 * **I) Update log driver** - Replaces Synology's log driver with a default log driver `json-file` to improve compatibility. The configuration is updated at `/var/packages/Docker/etc/dockerd.json`
 * **J) Restore log driver** - Restores the log driver (`/var/packages/Docker/etc/dockerd.json`) from the configuration within a backup archive.
 * **K) Start Docker daemon** - Starts the Docker daemon by invoking `synoservicectl --start pkgctl-Docker`.
-* **L) Clean working folder** - Removes temporary files from the working directory (defaults to `/tmp/docker_update`).
+* **L) Clean working folder** - Removes temporary files (folder `/docker`) from the working directory (defaults to `/tmp/docker_update`). The temporary files are created when extracting a downloaded archive or extracting a backup.
 
 
 ### Options
