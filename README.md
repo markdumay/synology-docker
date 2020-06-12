@@ -92,9 +92,9 @@ Under the hood, the five different commands invoke a specific workflow or sequen
 |--------------------------------|--------|----------|---------|---------|--------|
 | A) Download Docker binary      |        | Step 1   |         |         | Step 1 |
 | B) Download Compose binary     |        | Step 2   |         |         | Step 2 |
-| C) Stop Docker daemon          | Step 1 |          | Step 1  | Step 2  | Step 3 |
-| D) Backup current files        | Step 2 |          | Step 2  |         | Step 4 |
-| E) Extract files from backup   |        |          |         | Step 1  |        |
+| C) Extract files from backup   |        |          |         | Step 1  |        |
+| D) Stop Docker daemon          | Step 1 |          | Step 1  | Step 2  | Step 3 |
+| E) Backup current files        | Step 2 |          | Step 2  |         | Step 4 |
 | F) Extract downloaded binaries |        |          | Step 3  |         | Step 5 |
 | G) Restore Docker binaries     |        |          |         | Step 3  |        |
 | H) Install Docker binaries     |        |          | Step 4  |         | Step 6 |
@@ -105,9 +105,9 @@ Under the hood, the five different commands invoke a specific workflow or sequen
 
 * **A) Download Docker binary** - Downloads an archive containing Docker Engine binaries from `https://download.docker.com/linux/static/stable/x86_64/docker-${VERSION}.tgz`. The binaries are compatible with the Intel x86 (64 bit) architecture. Unless a specific version is specified by the `--docker` flag, *Synology-Docker` pulls the latest stable version available.
 * **B) Download Compose binary** - Downloads the Docker Compose binary from `https://github.com/docker/compose/releases/download/${VERSION}/docker-compose-Linux-x86_64`. Unless a specific version is specified by the `--compose` flag, *Synology-Docker* pulls the latest stable version available.
-* **C) Stop Docker daemon** - Stops the Docker daemon by invoking `synoservicectl --stop pkgctl-Docker`.
-* **D) Backup current files** - Creates a backup of the current Docker binaries, including Docker Compose. The configuration of the logging driver is included in the archive too. The files included refer to `/var/packages/Docker/target/usr/bin/*` and `/var/packages/Docker/etc/dockerd.json`.
-* **E) Extract files from backup** - Extracts the files from a backup archive specified by the `--backup` flag to the temp directory (`/tmp/docker_update`). 
+* **C) Extract files from backup** - Extracts the files from a backup archive specified by the `--backup` flag to the temp directory (`/tmp/docker_update`). 
+* **D) Stop Docker daemon** - Stops the Docker daemon by invoking `synoservicectl --stop pkgctl-Docker`.
+* **E) Backup current files** - Creates a backup of the current Docker binaries, including Docker Compose. The configuration of the logging driver is included in the archive too. The files included refer to `/var/packages/Docker/target/usr/bin/*` and `/var/packages/Docker/etc/dockerd.json`.
 * **F) Extract downloaded binaries** - Extracts the files from a downloaded archive to the temp directory (`/tmp/docker_update`). 
 * **G) Restore Docker binaries** - Restores the Docker binaries in `/var/packages/Docker/target/usr/bin/*` with the binaries extracted from a backup archive.
 * **H) Install Docker binaries** - Installs downloaded and extracted Docker binaries (including Docker Compose) to the folder `/var/packages/Docker/target/usr/bin/`.
