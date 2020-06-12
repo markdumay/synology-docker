@@ -105,9 +105,9 @@ detect_current_versions() {
     # Detect current Docker Compose version
     COMPOSE_VERSION=$(docker-compose -v 2>/dev/null | egrep -o "[0-9]*.[0-9]*.[0-9]*," | cut -d',' -f 1)
 
-    echo "Current DSM version: $(printf ${DSM_VERSION:-Unknown})"
-    echo "Current Docker version: $(printf ${DOCKER_VERSION:-Unknown})"
-    echo "Current Docker Compose version: $(printf ${COMPOSE_VERSION:-Unknown})"
+    echo "Current DSM version: ${DSM_VERSION:-Unknown}"
+    echo "Current Docker version: ${DOCKER_VERSION:-Unknown}"
+    echo "Current Docker Compose version: ${COMPOSE_VERSION:-Unknown}"
     if [ "$FORCE" != 'true' ] ; then
         validate_current_version
     fi
@@ -260,14 +260,14 @@ define_restore() {
 
 define_target_version() {
     detect_available_versions
-    echo "Target Docker version: $(printf ${TARGET_DOCKER_VERSION:-Unknown})"
-    echo "Target Docker Compose version: $(printf ${TARGET_COMPOSE_VERSION:-Unknown})"
+    echo "Target Docker version: ${TARGET_DOCKER_VERSION:-Unknown}"
+    echo "Target Docker Compose version: ${TARGET_COMPOSE_VERSION:-Unknown}"
     validate_available_versions
 }
 
 define_target_download() {
     detect_available_downloads
-    echo "Target Docker version: $(printf ${TARGET_DOCKER_VERSION:-Unknown})"
+    echo "Target Docker version: ${TARGET_DOCKER_VERSION:-Unknown}"
     echo "Target Docker Compose version: Unknown"
     validate_downloaded_versions
 }
