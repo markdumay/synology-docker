@@ -147,7 +147,7 @@ detect_available_versions() {
         DOCKER_BIN_FILES=$(curl -s "$DOWNLOAD_DOCKER/" | egrep -o '>docker-[0-9]*.[0-9]*.[0-9]*(-ce)?.tgz' | cut -c 2-)
         LATEST_DOCKER_BIN=$(echo "$DOCKER_BIN_FILES" | sort -bt. -k1,1 -k2,2n -k3,3n -k4,4n -k5,5n | tail -1)
         LATEST_DOCKER_VERSION=$(echo "$LATEST_DOCKER_BIN" | sed "s/docker-//g" | sed "s/.tgz//g" )
-        TARGET_DOCKER_VERSION=$LATEST_DOCKER_VERSION
+        TARGET_DOCKER_VERSION="$LATEST_DOCKER_VERSION"
 
         if [ -z "$TARGET_DOCKER_VERSION" ] ; then
             echo "Could not detect Docker versions available for download, setting default value"
@@ -159,7 +159,7 @@ detect_available_versions() {
     if [ -z "$TARGET_COMPOSE_VERSION" ] ; then
         COMPOSE_TAGS=$(curl -s "$DOWNLOAD_GITHUB/tags" | egrep "a href=\"$GITHUB_RELEASES/[0-9]+.[0-9]+.[0-9]+\"")
         LATEST_COMPOSE_VERSION=$(echo "$COMPOSE_TAGS" | head -1 | cut -c 45- | sed "s/\">//g")
-        TARGET_COMPOSE_VERSION=$LATEST_COMPOSE_VERSION
+        TARGET_COMPOSE_VERSION="$LATEST_COMPOSE_VERSION"
 
         if [ -z "$TARGET_COMPOSE_VERSION" ] ; then
             echo "Could not detect Docker Compose versions available for download, setting default value"
