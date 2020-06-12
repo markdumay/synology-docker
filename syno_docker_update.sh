@@ -371,13 +371,13 @@ execute_extract_backup() {
     tar -zxvf "$BACKUP_DIR/$DOCKER_BACKUP_FILENAME"
     mv bin docker
 
-    if [ ! -d "$docker" ] ; then 
+    if [ ! -d "docker" ] ; then 
         terminate "Docker binaries could not be extracted from archive"
     fi
-    if [ ! -f "$docker/docker-compose" ] ; then 
+    if [ ! -f "docker/docker-compose" ] ; then 
         terminate "Docker compose binary could not be extracted from archive"
     fi
-    if [ ! -f "$dockerd.json" ] ; then 
+    if [ ! -f "dockerd.json" ] ; then 
         terminate "Log driver configuration could not be extracted from archive"
     fi
 }
