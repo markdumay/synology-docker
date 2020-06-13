@@ -38,6 +38,9 @@
 
 
 ## About
+| :warning: The repository 'Synology-Docker' is not supported by Synology and can potentially lead to malfunctioning of your NAS. Use this script at your own risk. Please keep a backup of your files. |
+| --- |
+
 [Synology][synology_url] is a popular manufacturer of Network Attached Storage (NAS) devices. It provides a web-based user interface called Disk Station Manager (DSM). Synology also supports Docker on selected [models][synology_docker]. Docker is a lightweight virtualization application that gives you the ability to run containers directly on your NAS. The add-on package provided by Synology to install Docker is typically a version behind on the latest available version from Docker. *Synology-Docker* is a POSIX-compliant shell script to update both the Docker Engine and Docker Compose on your NAS to the latest version or a specified version.
 
 <!-- TODO: add tutorial deep-link 
@@ -66,10 +69,6 @@ cd synology-docker
 <!-- TODO: TEST CHMOD -->
 
 ## Usage
-
-| :warning: Synology-Docker is not supported by Synology and can potentially lead to malfunctioning of your Docker package. Please keep a backup of your files. |
-| --- |
-
 *Synology-Docker* requires `sudo` rights. Use the following command to invoke *Synology-Docker* from the command line.
 
 ```
@@ -125,7 +124,7 @@ Under the hood, the five different commands invoke a specific workflow or sequen
 | `-b`        | `--backup`  | `NAME`     | Name of the backup (defaults to `docker_backup_YYMMDDHHMMSS.tgz`) |
 | `-c`        | `--compose` | `VERSION`  | Specify the Docker Compose target version (defaults to latest available on github.com) |
 | `-d`        | `--docker`  | `VERSION`  | Specify the Docker target version (defaults to latest available on docker.com) |
-| `-f`        | `--force`   |            | Force the update and bypass compatibility checks |
+| `-f`        | `--force`   |            | Force the update and bypass compatibility check / confirmation check |
 | `-p`        | `--path`    |            | Path of the backup (defaults to current directory |
 | `-s`        | `--stage`   |            | Stage only, do not replace binaries or the configuration of log driver |
 
