@@ -2,13 +2,15 @@
 
 #======================================================================================================================
 # Title         : syno_docker_update.sh
-# Description   : Updates or restores Docker Engine and Docker Compose on Synology to target version
+# Description   : An Unofficial Script to Update or restore Docker Engine and Docker Compose on Synology
 # Author        : Mark Dumay
-# Date          : June 12th, 2020
-# Version       : 1.0.2
+# Date          : June 13th, 2020
+# Version       : 1.0.3
 # Usage         : sudo ./syno_docker_update.sh [OPTIONS] COMMAND
 # Repository    : https://github.com/markdumay/synology-docker.git
-# Comments      : Inspired by https://gist.github.com/Mikado8231/bf207a019373f9e539af4d511ae15e0d
+# License       : MIT - https://github.com/markdumay/synology-docker/blob/master/LICENSE
+# Credits       : Inspired by https://gist.github.com/Mikado8231/bf207a019373f9e539af4d511ae15e0d
+# Comments      : Use this script at your own risk. Refer to the license for the warranty disclaimer.
 #======================================================================================================================
 
 #======================================================================================================================
@@ -69,7 +71,7 @@ usage() {
     echo "  -b, --backup NAME      Name of the backup (defaults to 'docker_backup_YYMMDDHHMMSS.tgz')"
     echo "  -c, --compose VERSION  Docker Compose target version (defaults to latest)"
     echo "  -d, --docker VERSION   Docker target version (defaults to latest)"
-    echo "  -f, --force            Force update (bypass compatibility check)"
+    echo "  -f, --force            Force update (bypass compatibility check and confirmation check)"
     echo "  -p, --path PATH        Path of the backup (defaults to '$BACKUP_DIR')"
     echo "  -s, --stage            Stage only, do not actually replace binaries or configuration of log driver"
     echo
@@ -303,6 +305,21 @@ define_target_download() {
     validate_downloaded_versions
 }
 
+confirm_operation() {
+    if [ "$FORCE" != 'true' ] ; then
+        echo
+        echo "WARNING! This will replace:"
+        echo "  - Docker Engine"
+        echo "  - Docker Compose"
+        echo "  - Docker daemon log driver"
+        echo
+        read -p "Are you sure you want to continue? [y/N] " CONFIRMATION
+
+        if [ "$CONFIRMATION" != 'y' ] && [ "$CONFIRMATION" != 'Y' ] ; then
+            exit
+        fi 
+    fi
+}
 
 #======================================================================================================================
 # Workflow Functions
@@ -572,6 +589,7 @@ case "$COMMAND" in
         detect_current_versions
         execute_prepare
         define_target_download
+        confirm_operation
         execute_stop_syno
         execute_backup
         execute_extract_bin
@@ -584,6 +602,7 @@ case "$COMMAND" in
         detect_current_versions
         execute_prepare
         define_restore
+        confirm_operation
         execute_extract_backup
         execute_stop_syno
         execute_restore_bin
@@ -596,6 +615,7 @@ case "$COMMAND" in
         execute_prepare
         define_target_version
         define_update
+        confirm_operation
         execute_download_bin
         execute_download_compose
         execute_stop_syno
