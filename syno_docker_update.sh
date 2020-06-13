@@ -25,7 +25,7 @@ DEFAULT_DOCKER_VERSION='19.03.11'
 DEFAULT_COMPOSE_VERSION='1.26.0'
 DOWNLOAD_DOCKER=https://download.docker.com/linux/static/stable/x86_64
 DOWNLOAD_GITHUB=https://github.com/docker/compose
-GITHUB_RELEASES=/docker/compose/releases/tag
+GITHUB_API_COMPOSE=https://api.github.com/repos/docker/compose/releases/latest
 SYNO_DOCKER_SERV_NAME=pkgctl-Docker
 SYNO_DOCKER_DIR=/var/packages/Docker
 SYNO_DOCKER_BIN_PATH=$SYNO_DOCKER_DIR/target/usr
@@ -161,9 +161,7 @@ detect_available_versions() {
 
     # Detect latest available stable Docker Compose version (ignores release candidates)
     if [ -z "$TARGET_COMPOSE_VERSION" ] ; then
-        COMPOSE_TAGS=$(curl -s "$DOWNLOAD_GITHUB/tags" | egrep "a href=\"$GITHUB_RELEASES/[0-9]+.[0-9]+.[0-9]+\"")
-        LATEST_COMPOSE_VERSION=$(echo "$COMPOSE_TAGS" | head -1 | cut -c 45- | sed "s/\">//g")
-        TARGET_COMPOSE_VERSION="$LATEST_COMPOSE_VERSION"
+        TARGET_COMPOSE_VERSION=$(curl -s "$GITHUB_API_COMPOSE" | grep "tag_name" | egrep -o "[0-9]+.[0-9]+.[0-9]+")
 
         if [ -z "$TARGET_COMPOSE_VERSION" ] ; then
             echo "Could not detect Docker Compose versions available for download, setting default value"
