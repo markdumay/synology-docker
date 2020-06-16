@@ -87,20 +87,20 @@ sudo ./syno_docker_update.sh [OPTIONS] COMMAND
 | **`update`**   |           | Update Docker and Docker Compose to a target version (creates a backup first) |
 
 Under the hood, the five different commands invoke a specific workflow or sequence of steps. The below table shows the workflows and the order of steps for each of the commands.
-| Workflow step                  | backup | download | install | restore | update |
-|--------------------------------|--------|----------|---------|---------|--------|
-| A) Download Docker binary      |        | Step 1   |         |         | Step 1 |
-| B) Download Compose binary     |        | Step 2   |         |         | Step 2 |
-| C) Extract files from backup   |        |          |         | Step 1  |        |
-| D) Stop Docker daemon          | Step 1 |          | Step 1  | Step 2  | Step 3 |
-| E) Backup current files        | Step 2 |          | Step 2  |         | Step 4 |
-| F) Extract downloaded binaries |        |          | Step 3  |         | Step 5 |
-| G) Restore Docker binaries     |        |          |         | Step 3  |        |
-| H) Install Docker binaries     |        |          | Step 4  |         | Step 6 |
-| I) Update log driver           |        |          | Step 5  |         | Step 7 |
-| J) Restore log driver          |        |          |         | Step 4  |        |
-| K) Start Docker daemon         | Step 3 |          | Step 6  | Step 5  | Step 8 |
-| L) Clean temp folder           |        |          |         |         | Step 9 |
+| #  | Workflow step               | backup | download | install | restore | update |
+|----|-----------------------------|--------|----------|---------|---------|--------|
+| A) | Download Docker binary      |        | Step 1   |         |         | Step 1 |
+| B) | Download Compose binary     |        | Step 2   |         |         | Step 2 |
+| C) | Extract files from backup   |        |          |         | Step 1  |        |
+| D) | Stop Docker daemon          | Step 1 |          | Step 1  | Step 2  | Step 3 |
+| E) | Backup current files        | Step 2 |          | Step 2  |         | Step 4 |
+| F) | Extract downloaded binaries |        |          | Step 3  |         | Step 5 |
+| G) | Restore Docker binaries     |        |          |         | Step 3  |        |
+| H) | Install Docker binaries     |        |          | Step 4  |         | Step 6 |
+| I) | Update log driver           |        |          | Step 5  |         | Step 7 |
+| J) | Restore log driver          |        |          |         | Step 4  |        |
+| K) | Start Docker daemon         | Step 3 |          | Step 6  | Step 5  | Step 8 |
+| L) | Clean temp folder           |        |          |         |         | Step 9 |
 
 * **A) Download Docker binary** - Downloads an archive containing Docker Engine binaries from `https://download.docker.com/linux/static/stable/x86_64/docker-${VERSION}.tgz`. The binaries are compatible with the Intel x86 (64 bit) architecture. Unless a specific version is specified by the `--docker` flag, *Synology-Docker` pulls the latest stable version available.
 * **B) Download Compose binary** - Downloads the Docker Compose binary from `https://github.com/docker/compose/releases/download/${VERSION}/docker-compose-Linux-x86_64`. Unless a specific version is specified by the `--compose` flag, *Synology-Docker* pulls the latest stable version available.
@@ -125,7 +125,7 @@ Under the hood, the five different commands invoke a specific workflow or sequen
 | `-c`        | `--compose` | `VERSION`  | Specify the Docker Compose target version (defaults to latest available on github.com) |
 | `-d`        | `--docker`  | `VERSION`  | Specify the Docker target version (defaults to latest available on docker.com) |
 | `-f`        | `--force`   |            | Force the update and bypass compatibility check / confirmation check |
-| `-p`        | `--path`    |            | Path of the backup (defaults to current directory |
+| `-p`        | `--path`    |            | Path of the backup (defaults to current directory) |
 | `-s`        | `--stage`   |            | Stage only, do not replace binaries or the configuration of log driver |
 
 
