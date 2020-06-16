@@ -2,13 +2,15 @@
 
 #======================================================================================================================
 # Title         : syno_docker_update.sh
-# Description   : Updates or restores Docker Engine and Docker Compose on Synology to target version
+# Description   : An Unofficial Script to Update or restore Docker Engine and Docker Compose on Synology
 # Author        : Mark Dumay
-# Date          : June 12th, 2020
-# Version       : 1.0.2
+# Date          : June 13th, 2020
+# Version       : 1.0.3
 # Usage         : sudo ./syno_docker_update.sh [OPTIONS] COMMAND
 # Repository    : https://github.com/markdumay/synology-docker.git
-# Comments      : Inspired by https://gist.github.com/Mikado8231/bf207a019373f9e539af4d511ae15e0d
+# License       : MIT - https://github.com/markdumay/synology-docker/blob/master/LICENSE
+# Credits       : Inspired by https://gist.github.com/Mikado8231/bf207a019373f9e539af4d511ae15e0d
+# Comments      : Use this script at your own risk. Refer to the license for the warranty disclaimer.
 #======================================================================================================================
 
 #======================================================================================================================
@@ -23,7 +25,7 @@ DEFAULT_DOCKER_VERSION='19.03.11'
 DEFAULT_COMPOSE_VERSION='1.26.0'
 DOWNLOAD_DOCKER=https://download.docker.com/linux/static/stable/x86_64
 DOWNLOAD_GITHUB=https://github.com/docker/compose
-GITHUB_RELEASES=/docker/compose/releases/tag
+GITHUB_API_COMPOSE=https://api.github.com/repos/docker/compose/releases/latest
 SYNO_DOCKER_SERV_NAME=pkgctl-Docker
 SYNO_DOCKER_DIR=/var/packages/Docker
 SYNO_DOCKER_BIN_PATH=$SYNO_DOCKER_DIR/target/usr
@@ -41,8 +43,10 @@ SYNO_DOCKER_JSON_CONFIG="{
 #======================================================================================================================
 # Variables
 #======================================================================================================================
-WORKING_DIR="/tmp/docker_update"
-DOCKER_BACKUP_FILENAME="$WORKING_DIR/docker_backup_$(date +%Y%m%d_%H%M%S).tgz"
+TEMP_DIR="/tmp/docker_update"
+BACKUP_DIR="$PWD"
+DOWNLOAD_DIR="$TEMP_DIR"
+DOCKER_BACKUP_FILENAME="docker_backup_$(date +%Y%m%d_%H%M%S).tgz"
 SKIP_DOCKER_UPDATE='false'
 SKIP_COMPOSE_UPDATE='false'
 FORCE='false'
@@ -64,11 +68,11 @@ usage() {
     echo "Usage: $0 [OPTIONS] COMMAND" 
     echo
     echo "Options:"
-    echo "  -b, --backup NAME      Path and name of the backup (defaults to "
-    echo "                         '$WORKING_DIR/docker_backup_YYMMDDHHMMSS.tgz')"
+    echo "  -b, --backup NAME      Name of the backup (defaults to 'docker_backup_YYMMDDHHMMSS.tgz')"
     echo "  -c, --compose VERSION  Docker Compose target version (defaults to latest)"
     echo "  -d, --docker VERSION   Docker target version (defaults to latest)"
-    echo "  -f, --force            Force update (bypass compatibility check)"
+    echo "  -f, --force            Force update (bypass compatibility check and confirmation check)"
+    echo "  -p, --path PATH        Path of the backup (defaults to '$BACKUP_DIR')"
     echo "  -s, --stage            Stage only, do not actually replace binaries or configuration of log driver"
     echo
     echo "Commands:"
@@ -131,10 +135,10 @@ validate_current_version() {
     fi
 }
 
-# Detects downloaded Docker versions
+# Detects Docker versions downloaded on disk
 detect_available_downloads() {
     if [ -z "$TARGET_DOCKER_VERSION" ] ; then
-        DOWNLOADS=$(find "$WORKING_DIR/" -maxdepth 1 -type f | cut -c 4- | egrep -o 'docker-[0-9]*.[0-9]*.[0-9]*(-ce)?.tgz')
+        DOWNLOADS=$(find "$DOWNLOAD_DIR/" -maxdepth 1 -type f | cut -c 4- | egrep -o 'docker-[0-9]*.[0-9]*.[0-9]*(-ce)?.tgz')
         LATEST_DOWNLOAD=$(echo "$DOWNLOADS" | sort -bt. -k1,1 -k2,2n -k3,3n -k4,4n -k5,5n | tail -1)
         TARGET_DOCKER_VERSION=$(echo "$LATEST_DOWNLOAD" | sed "s/docker-//g" | sed "s/.tgz//g")
     fi
@@ -157,9 +161,7 @@ detect_available_versions() {
 
     # Detect latest available stable Docker Compose version (ignores release candidates)
     if [ -z "$TARGET_COMPOSE_VERSION" ] ; then
-        COMPOSE_TAGS=$(curl -s "$DOWNLOAD_GITHUB/tags" | egrep "a href=\"$GITHUB_RELEASES/[0-9]+.[0-9]+.[0-9]+\"")
-        LATEST_COMPOSE_VERSION=$(echo "$COMPOSE_TAGS" | head -1 | cut -c 45- | sed "s/\">//g")
-        TARGET_COMPOSE_VERSION="$LATEST_COMPOSE_VERSION"
+        TARGET_COMPOSE_VERSION=$(curl -s "$GITHUB_API_COMPOSE" | grep "tag_name" | egrep -o "[0-9]+.[0-9]+.[0-9]+")
 
         if [ -z "$TARGET_COMPOSE_VERSION" ] ; then
             echo "Could not detect Docker Compose versions available for download, setting default value"
@@ -185,12 +187,12 @@ validate_available_versions() {
 validate_downloaded_versions() {
     TARGET_DOCKER_BIN="docker-$TARGET_DOCKER_VERSION.tgz"
     # Test Docker archive is available on path
-    if [ ! -f "$WORKING_DIR/$TARGET_DOCKER_BIN" ] ; then
-        terminate "Could not find Docker archive ($WORKING_DIR/$TARGET_DOCKER_BIN)"
+    if [ ! -f "$DOWNLOAD_DIR/$TARGET_DOCKER_BIN" ] ; then
+        terminate "Could not find Docker archive ($DOWNLOAD_DIR/$TARGET_DOCKER_BIN)"
     fi
 
-    if [ ! -f "$WORKING_DIR/docker-compose" ] ; then 
-        terminate "Could not find Docker compose binary ($WORKING_DIR/docker-compose)"
+    if [ ! -f "$DOWNLOAD_DIR/docker-compose" ] ; then 
+        terminate "Could not find Docker compose binary ($DOWNLOAD_DIR/docker-compose)"
     fi
 }
 
@@ -210,25 +212,56 @@ validate_backup_filename() {
         usage
         terminate "$1"
     fi
+
+    # split into directory and filename if applicable
+    # TODO: test
+    BASEPATH=$(dirname "$DOCKER_BACKUP_FILENAME")
+    if [ -z "$BASEPATH" ] || [ "$BASEPATH" != "." ]; then
+        ABS_PATH_AND_FILE=$(readlink -f "$DOCKER_BACKUP_FILENAME")
+        BACKUP_DIR=$(dirname "$ABS_PATH_AND_FILE")
+        DOCKER_BACKUP_FILENAME=$(basename "$ABS_PATH_AND_FILE") 
+    fi
 }
 
-# Validates working directory is available
-validate_working_dir() {
+# Validates provided path is available
+validate_provided_download_path() {
     # check PATH is provided
-    if [ -z "$WORKING_DIR" ] || [ "${WORKING_DIR:0:1}" == "-" ] ; then
+    if [ -z "$DOWNLOAD_DIR" ] || [ "${DOWNLOAD_DIR:0:1}" == "-" ] ; then
         usage
         terminate "$1"
     fi
 
-    # cut trailing '/'
-    if [ "${WORKING_DIR:0-1}" == "/" ] ; then
-        WORKING_DIR="${WORKING_DIR%?}"
-    fi
+    # cut trailing '/' and convert to absolute path
+    DOWNLOAD_DIR=$(readlink -f "$DOWNLOAD_DIR")
 
     # check PATH exists
-    if [ ! -d "$WORKING_DIR" ] ; then
+    if [ ! -d "$DOWNLOAD_DIR" ] ; then
         usage
         terminate "$2"
+    fi
+}
+
+# Validates provided path is available
+validate_provided_backup_path() {
+    # check PATH is provided
+    if [ -z "$BACKUP_DIR" ] || [ "${BACKUP_DIR:0:1}" == "-" ] ; then
+        usage
+        terminate "$1"
+    fi
+
+    # cut trailing '/' and convert to absolute path
+    BACKUP_DIR=$(readlink -f "$BACKUP_DIR")
+
+    # check PATH exists
+    if [ ! -d "$BACKUP_DIR" ] ; then
+        usage
+        terminate "$2"
+    fi
+
+    # confirm backup dir is different from temp dir
+    if [ "$BACKUP_DIR" ==  "$TEMP_DIR" ] ; then
+        usage
+        terminate "$3"
     fi
 }
 
@@ -254,8 +287,6 @@ define_restore() {
     if [ "$BACKUP_FILENAME_FLAG" != 'true' ]; then
         terminate "Please specify backup filename (--backup NAME)"
     fi
-
-    WORKING_DIR=$(dirname "$DOCKER_BACKUP_FILENAME")
 }
 
 define_target_version() {
@@ -272,19 +303,30 @@ define_target_download() {
     validate_downloaded_versions
 }
 
+confirm_operation() {
+    if [ "$FORCE" != 'true' ] ; then
+        echo
+        echo "WARNING! This will replace:"
+        echo "  - Docker Engine"
+        echo "  - Docker Compose"
+        echo "  - Docker daemon log driver"
+        echo
+        read -p "Are you sure you want to continue? [y/N] " CONFIRMATION
+
+        if [ "$CONFIRMATION" != 'y' ] && [ "$CONFIRMATION" != 'Y' ] ; then
+            exit
+        fi 
+    fi
+}
 
 #======================================================================================================================
 # Workflow Functions
 #======================================================================================================================
 
-# Prepare working environment
+# Prepare temp environment
 execute_prepare() {
-    if [ "$WORKING_DIR" == '.' ] || [ "$WORKING_DIR" == './' ] || [ -z "$WORKING_DIR" ] ; then
-        WORKING_DIR="$PWD"
-    else
-        mkdir -p "$WORKING_DIR"
-    fi
     execute_clean 'silent'
+    mkdir -p "$TEMP_DIR"
 }
 
 # Stop Docker service if running
@@ -303,11 +345,9 @@ execute_stop_syno() {
 
 # Backup current Docker binaries
 execute_backup() {
-    print_status "Backing up current Docker binaries ($DOCKER_BACKUP_FILENAME)"
-    BASEPATH=$(dirname "$DOCKER_BACKUP_FILENAME")
-    FILENAME=$(basename "$DOCKER_BACKUP_FILENAME") 
-    cd "$BASEPATH"
-    tar -czvf "$FILENAME" -C "$SYNO_DOCKER_BIN_PATH" bin -C "$SYNO_DOCKER_JSON_PATH" "dockerd.json"
+    print_status "Backing up current Docker binaries ($BACKUP_DIR/$DOCKER_BACKUP_FILENAME)"
+    cd "$BACKUP_DIR"
+    tar -czvf "$DOCKER_BACKUP_FILENAME" -C "$SYNO_DOCKER_BIN_PATH" bin -C "$SYNO_DOCKER_JSON_PATH" "dockerd.json"
     if [ ! -f "$DOCKER_BACKUP_FILENAME" ] ; then
         terminate "Backup issue"
     fi
@@ -318,7 +358,7 @@ execute_download_bin() {
     if [ "$SKIP_DOCKER_UPDATE" == 'false' ] ; then
         TARGET_DOCKER_BIN="docker-$TARGET_DOCKER_VERSION.tgz"
         print_status "Downloading target Docker binary ($DOWNLOAD_DOCKER/$TARGET_DOCKER_BIN)"
-        response=$(curl "$DOWNLOAD_DOCKER/$TARGET_DOCKER_BIN" --write-out %{http_code} -o "$WORKING_DIR/$TARGET_DOCKER_BIN")
+        response=$(curl "$DOWNLOAD_DOCKER/$TARGET_DOCKER_BIN" --write-out %{http_code} -o "$DOWNLOAD_DIR/$TARGET_DOCKER_BIN")
         if [ $response != 200 ] ; then 
             terminate "Binary could not be downloaded"
         fi
@@ -329,31 +369,41 @@ execute_download_bin() {
 execute_extract_bin() {
     if [ "$SKIP_DOCKER_UPDATE" == 'false' ] ; then
         TARGET_DOCKER_BIN="docker-$TARGET_DOCKER_VERSION.tgz"
-        print_status "Extracting target Docker binary ($WORKING_DIR/$TARGET_DOCKER_BIN)"
-        tar -zxvf "$WORKING_DIR/$TARGET_DOCKER_BIN" -C "$WORKING_DIR"
-        if [ ! -d "$WORKING_DIR/docker" ] ; then 
+        print_status "Extracting target Docker binary ($DOWNLOAD_DIR/$TARGET_DOCKER_BIN)"
+
+        if [ ! -f "$DOWNLOAD_DIR/$TARGET_DOCKER_BIN" ] ; then
+            terminate "Docker binary archive not found"
+        fi
+
+        cd "$TEMP_DIR"
+        tar -zxvf "$DOWNLOAD_DIR/$TARGET_DOCKER_BIN"
+        if [ ! -d "docker" ] ; then 
             terminate "Files could not be extracted from archive"
         fi
     fi
 }
 
 # Extract target Docker binary
+# TODO: fix
 execute_extract_backup() {
-    print_status "Extracting Docker backup ($DOCKER_BACKUP_FILENAME)"
-    BASEPATH=$(dirname "$DOCKER_BACKUP_FILENAME")
-    FILENAME=$(basename "$DOCKER_BACKUP_FILENAME") 
-    cd "$BASEPATH"
-    tar -zxvf "$FILENAME"
+    print_status "Extracting Docker backup ($BACKUP_DIR/$DOCKER_BACKUP_FILENAME)"
+
+    if [ ! -f "$BACKUP_DIR/$DOCKER_BACKUP_FILENAME" ] ; then
+        terminate "Backup file not found"
+    fi
+
+    cd "$TEMP_DIR"
+    tar -zxvf "$BACKUP_DIR/$DOCKER_BACKUP_FILENAME"
     mv bin docker
 
-    if [ ! -d "$WORKING_DIR/docker" ] ; then 
+    if [ ! -d "docker" ] ; then 
         terminate "Docker binaries could not be extracted from archive"
     fi
-    if [ ! -f "$WORKING_DIR/docker/docker-compose" ] ; then 
+    if [ ! -f "docker/docker-compose" ] ; then 
         terminate "Docker compose binary could not be extracted from archive"
     fi
-    if [ ! -f "$WORKING_DIR/dockerd.json" ] ; then 
-        terminate "log driver configuration could not be extracted from archive"
+    if [ ! -f "dockerd.json" ] ; then 
+        terminate "Log driver configuration could not be extracted from archive"
     fi
 }
 
@@ -362,7 +412,7 @@ execute_download_compose() {
     if [ "$SKIP_COMPOSE_UPDATE" == 'false' ] ; then
         COMPOSE_BIN="$DOWNLOAD_GITHUB/releases/download/$TARGET_COMPOSE_VERSION/docker-compose-Linux-x86_64"
         print_status "Downloading target Docker Compose binary ($COMPOSE_BIN)"
-        response=$(curl -L "$COMPOSE_BIN" --write-out %{http_code} -o "$WORKING_DIR/docker-compose")
+        response=$(curl -L "$COMPOSE_BIN" --write-out %{http_code} -o "$DOWNLOAD_DIR/docker-compose")
         if [ $response != 200 ] ; then 
             terminate "Binary could not be downloaded"
         fi
@@ -375,10 +425,10 @@ execute_install_bin() {
     if [ "$STAGE" == 'false' ] ; then
 
         if [ "$SKIP_DOCKER_UPDATE" == 'false' ] ; then
-            cp "$WORKING_DIR"/docker/* "$SYNO_DOCKER_BIN"/
+            cp "$TEMP_DIR"/docker/* "$SYNO_DOCKER_BIN"/
         fi
         if [ "$SKIP_COMPOSE_UPDATE" == 'false' ] ; then
-            cp "$WORKING_DIR"/docker-compose "$SYNO_DOCKER_BIN"/docker-compose
+            cp "$TEMP_DIR"/docker-compose "$SYNO_DOCKER_BIN"/docker-compose
         fi
         chmod +x "$SYNO_DOCKER_BIN"/*
     else
@@ -390,7 +440,7 @@ execute_install_bin() {
 execute_restore_bin() {
     print_status "Restoring binaries"
     if [ "$STAGE" == 'false' ] ; then
-        cp "$WORKING_DIR"/docker/* "$SYNO_DOCKER_BIN"/
+        cp "$TEMP_DIR"/docker/* "$SYNO_DOCKER_BIN"/
         chmod +x "$SYNO_DOCKER_BIN"/*
     else
         echo "Skipping restoring in STAGE mode"
@@ -415,7 +465,7 @@ execute_update_log() {
 execute_restore_log() {
     print_status "Restoring log driver"
     if [ "$STAGE" == 'false' ] ; then
-        cp "$WORKING_DIR"/dockerd.json "$SYNO_DOCKER_JSON"
+        cp "$TEMP_DIR"/dockerd.json "$SYNO_DOCKER_JSON"
     else
         echo "Skipping restoring in STAGE mode"
     fi
@@ -441,12 +491,12 @@ execute_start_syno() {
     fi
 }
 
-# Clean the working folder
+# Clean the temp folder
 execute_clean() {
     if [ "$1" != 'silent' ] ; then
-        print_status "Cleaning the working folder"
+        print_status "Cleaning the temp folder"
     fi
-    rm -rf "$WORKING_DIR/docker"
+    rm -rf "$TEMP_DIR"
 }
 
 #======================================================================================================================
@@ -489,6 +539,12 @@ while [ "$1" != "" ]; do
             usage
             exit
             ;;
+        -p | --path )
+            shift
+            BACKUP_DIR="$1"
+            validate_provided_backup_path "Path not specified" "Path not found" \
+                "Path is equal to temp directory, please specify a different path"
+            ;;
         -s | --stage )
             STAGE='true'
             ;;
@@ -498,8 +554,8 @@ while [ "$1" != "" ]; do
         download | install )
             COMMAND="$1"
             shift
-            WORKING_DIR="$1"
-            validate_working_dir "Path not specified" "Path not found"
+            DOWNLOAD_DIR="$1"
+            validate_provided_download_path "Path not specified" "Path not found"
             ;;
         * )
             usage
@@ -531,6 +587,7 @@ case "$COMMAND" in
         detect_current_versions
         execute_prepare
         define_target_download
+        confirm_operation
         execute_stop_syno
         execute_backup
         execute_extract_bin
@@ -543,8 +600,9 @@ case "$COMMAND" in
         detect_current_versions
         execute_prepare
         define_restore
-        execute_stop_syno
+        confirm_operation
         execute_extract_backup
+        execute_stop_syno
         execute_restore_bin
         execute_restore_log
         execute_start_syno
@@ -555,6 +613,7 @@ case "$COMMAND" in
         execute_prepare
         define_target_version
         define_update
+        confirm_operation
         execute_download_bin
         execute_download_compose
         execute_stop_syno

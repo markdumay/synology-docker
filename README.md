@@ -38,6 +38,9 @@
 
 
 ## About
+| :warning: The repository 'Synology-Docker' is not supported by Synology and can potentially lead to malfunctioning of your NAS. Use this script at your own risk. Please keep a backup of your files. |
+| --- |
+
 [Synology][synology_url] is a popular manufacturer of Network Attached Storage (NAS) devices. It provides a web-based user interface called Disk Station Manager (DSM). Synology also supports Docker on selected [models][synology_docker]. Docker is a lightweight virtualization application that gives you the ability to run containers directly on your NAS. The add-on package provided by Synology to install Docker is typically a version behind on the latest available version from Docker. *Synology-Docker* is a POSIX-compliant shell script to update both the Docker Engine and Docker Compose on your NAS to the latest version or a specified version.
 
 <!-- TODO: add tutorial deep-link 
@@ -66,10 +69,6 @@ cd synology-docker
 <!-- TODO: TEST CHMOD -->
 
 ## Usage
-
-| :warning: Synology-Docker is not supported by Synology and can potentially lead to malfunctioning of your Docker package. Please keep a backup of your files. |
-| --- |
-
 *Synology-Docker* requires `sudo` rights. Use the following command to invoke *Synology-Docker* from the command line.
 
 ```
@@ -79,42 +78,42 @@ sudo ./syno_docker_update.sh [OPTIONS] COMMAND
 ### Commands
 *Docker-Synology* supports the following commands. 
 
-| Command       | Argument  | Description |
-|---------------|-----------|-------------|
-| **`backup`**    |           | Create a backup of Docker binaries (including Docker Compose) and `dockerd` configuration |
-| **`download`**  | PATH      | Download Docker and Docker Compose binaries to *PATH* |
-| **`install`**   | PATH      | Update Docker and Docker Compose from files on *PATH* |
-| **`restore`**   |           | Restore Docker and Docker Compose from a backup |
-| **`update`**    |           | Update Docker and Docker Compose to a target version (creates a backup first) |
+| Command        | Argument  | Description |
+|----------------|-----------|-------------|
+| **`backup`**   |           | Create a backup of Docker binaries (including Docker Compose) and `dockerd` configuration |
+| **`download`** | PATH      | Download Docker and Docker Compose binaries to *PATH* |
+| **`install`**  | PATH      | Update Docker and Docker Compose from files on *PATH* |
+| **`restore`**  |           | Restore Docker and Docker Compose from a backup |
+| **`update`**   |           | Update Docker and Docker Compose to a target version (creates a backup first) |
 
 Under the hood, the five different commands invoke a specific workflow or sequence of steps. The below table shows the workflows and the order of steps for each of the commands.
 | Workflow step                  | backup | download | install | restore | update |
 |--------------------------------|--------|----------|---------|---------|--------|
 | A) Download Docker binary      |        | Step 1   |         |         | Step 1 |
 | B) Download Compose binary     |        | Step 2   |         |         | Step 2 |
-| C) Stop Docker daemon          | Step 1 |          | Step 1  | Step 1  | Step 3 |
-| D) Backup current files        | Step 2 |          | Step 2  |         | Step 4 |
-| E) Extract files from backup   |        |          |         | Step 2  |        |
+| C) Extract files from backup   |        |          |         | Step 1  |        |
+| D) Stop Docker daemon          | Step 1 |          | Step 1  | Step 2  | Step 3 |
+| E) Backup current files        | Step 2 |          | Step 2  |         | Step 4 |
 | F) Extract downloaded binaries |        |          | Step 3  |         | Step 5 |
 | G) Restore Docker binaries     |        |          |         | Step 3  |        |
 | H) Install Docker binaries     |        |          | Step 4  |         | Step 6 |
 | I) Update log driver           |        |          | Step 5  |         | Step 7 |
 | J) Restore log driver          |        |          |         | Step 4  |        |
 | K) Start Docker daemon         | Step 3 |          | Step 6  | Step 5  | Step 8 |
-| L) Clean working folder        |        |          |         |         | Step 9 |
+| L) Clean temp folder           |        |          |         |         | Step 9 |
 
 * **A) Download Docker binary** - Downloads an archive containing Docker Engine binaries from `https://download.docker.com/linux/static/stable/x86_64/docker-${VERSION}.tgz`. The binaries are compatible with the Intel x86 (64 bit) architecture. Unless a specific version is specified by the `--docker` flag, *Synology-Docker` pulls the latest stable version available.
 * **B) Download Compose binary** - Downloads the Docker Compose binary from `https://github.com/docker/compose/releases/download/${VERSION}/docker-compose-Linux-x86_64`. Unless a specific version is specified by the `--compose` flag, *Synology-Docker* pulls the latest stable version available.
-* **C) Stop Docker daemon** - Stops the Docker daemon by invoking `synoservicectl --stop pkgctl-Docker`.
-* **D) Backup current files** - Creates a backup of the current Docker binaries, including Docker Compose. The configuration of the logging driver is included in the archive too. The files included refer to `/var/packages/Docker/target/usr/bin/*` and `/var/packages/Docker/etc/dockerd.json`.
-* **E) Extract files from backup** - Extracts the files from a backup archive specified by the `--backup` flag to the specified path or working directory (defaults to `/tmp/docker_update`). 
-* **F) Extract downloaded binaries** - Extracts the files from a downloaded archive to the working directory (defaults to `/tmp/docker_update`). 
+* **C) Extract files from backup** - Extracts the files from a backup archive specified by the `--backup` flag to the temp directory (`/tmp/docker_update`). 
+* **D) Stop Docker daemon** - Stops the Docker daemon by invoking `synoservicectl --stop pkgctl-Docker`.
+* **E) Backup current files** - Creates a backup of the current Docker binaries, including Docker Compose. The configuration of the logging driver is included in the archive too. The files included refer to `/var/packages/Docker/target/usr/bin/*` and `/var/packages/Docker/etc/dockerd.json`.
+* **F) Extract downloaded binaries** - Extracts the files from a downloaded archive to the temp directory (`/tmp/docker_update`). 
 * **G) Restore Docker binaries** - Restores the Docker binaries in `/var/packages/Docker/target/usr/bin/*` with the binaries extracted from a backup archive.
 * **H) Install Docker binaries** - Installs downloaded and extracted Docker binaries (including Docker Compose) to the folder `/var/packages/Docker/target/usr/bin/`.
 * **I) Update log driver** - Replaces Synology's log driver with a default log driver `json-file` to improve compatibility. The configuration is updated at `/var/packages/Docker/etc/dockerd.json`
 * **J) Restore log driver** - Restores the log driver (`/var/packages/Docker/etc/dockerd.json`) from the configuration within a backup archive.
 * **K) Start Docker daemon** - Starts the Docker daemon by invoking `synoservicectl --start pkgctl-Docker`.
-* **L) Clean working folder** - Removes temporary files (folder `/docker`) from the working directory (defaults to `/tmp/docker_update`). The temporary files are created when extracting a downloaded archive or extracting a backup.
+* **L) Clean temp folder** - Removes files from the temp directory (`/tmp/docker_update`). The temporary files are created when extracting a downloaded archive or extracting a backup.
 
 
 ### Options
@@ -122,10 +121,11 @@ Under the hood, the five different commands invoke a specific workflow or sequen
 
 | Option      | Alias       | Argument   | Description |
 |-------------|-------------|------------|-------------|
-| `-b`        | `--backup`  | `NAME`     | Path and name of the backup (defaults to `/tmp/docker_update/docker_backup_YYMMDDHHMMSS.tgz`) |
+| `-b`        | `--backup`  | `NAME`     | Name of the backup (defaults to `docker_backup_YYMMDDHHMMSS.tgz`) |
 | `-c`        | `--compose` | `VERSION`  | Specify the Docker Compose target version (defaults to latest available on github.com) |
 | `-d`        | `--docker`  | `VERSION`  | Specify the Docker target version (defaults to latest available on docker.com) |
-| `-f`        | `--force`   |            | Force the update and bypass compatibility checks |
+| `-f`        | `--force`   |            | Force the update and bypass compatibility check / confirmation check |
+| `-p`        | `--path`    |            | Path of the backup (defaults to current directory |
 | `-s`        | `--stage`   |            | Stage only, do not replace binaries or the configuration of log driver |
 
 
