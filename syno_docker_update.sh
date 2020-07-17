@@ -4,8 +4,8 @@
 # Title         : syno_docker_update.sh
 # Description   : An Unofficial Script to Update or restore Docker Engine and Docker Compose on Synology
 # Author        : Mark Dumay
-# Date          : June 13th, 2020
-# Version       : 1.0.3
+# Date          : July 4th, 2020
+# Version       : 1.0.4
 # Usage         : sudo ./syno_docker_update.sh [OPTIONS] COMMAND
 # Repository    : https://github.com/markdumay/synology-docker.git
 # License       : MIT - https://github.com/markdumay/synology-docker/blob/master/LICENSE
@@ -423,12 +423,11 @@ execute_download_compose() {
 execute_install_bin() {
     print_status "Installing binaries"
     if [ "$STAGE" == 'false' ] ; then
-
         if [ "$SKIP_DOCKER_UPDATE" == 'false' ] ; then
             cp "$TEMP_DIR"/docker/* "$SYNO_DOCKER_BIN"/
         fi
         if [ "$SKIP_COMPOSE_UPDATE" == 'false' ] ; then
-            cp "$TEMP_DIR"/docker-compose "$SYNO_DOCKER_BIN"/docker-compose
+            cp "$DOWNLOAD_DIR"/docker-compose "$SYNO_DOCKER_BIN"/docker-compose
         fi
         chmod +x "$SYNO_DOCKER_BIN"/*
     else
