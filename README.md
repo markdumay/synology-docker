@@ -71,7 +71,7 @@ cd synology-docker
 ## Usage
 *Synology-Docker* requires `sudo` rights. Use the following command to invoke *Synology-Docker* from the command line.
 
-```
+```console
 sudo ./syno_docker_update.sh [OPTIONS] COMMAND
 ```
 
@@ -138,7 +138,7 @@ Using *Synology-Docker* to update your Synology Docker package is known to bring
 
 ## Contributing
 1. Clone the repository and create a new branch 
-    ```
+    ```console
     $ git checkout https://github.com/markdumay/synology-docker.git -b name_for_new_branch
     ```
 2. Make and test the changes
