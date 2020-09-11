@@ -59,7 +59,7 @@ The project uses [Docker][docker_url], a lightweight virtualization application.
 
 
 ## Deployment
-Deployment of *Docker-Synology* is a matter of cloning the GitHub repository. Login to your NAS terminal via SSH first. Assuming you are in the working folder of your choice, clone the repository files. Git automatically creates a new folder `synology-docker` and copies the files to this directory. Then change your current folder to simplify the execution of the shell script.
+Deployment of *Synology-Docker* is a matter of cloning the GitHub repository. Login to your NAS terminal via SSH first. Assuming you are in the working folder of your choice, clone the repository files. Git automatically creates a new folder `synology-docker` and copies the files to this directory. Then change your current folder to simplify the execution of the shell script.
 
 ```console
 git clone https://github.com/markdumay/synology-docker.git
@@ -76,7 +76,7 @@ sudo ./syno_docker_update.sh [OPTIONS] COMMAND
 ```
 
 ### Commands
-*Docker-Synology* supports the following commands. 
+*Synology-Docker* supports the following commands. 
 
 | Command        | Argument  | Description |
 |----------------|-----------|-------------|
@@ -117,7 +117,7 @@ Under the hood, the five different commands invoke a specific workflow or sequen
 
 
 ### Options
-*Docker-Synology* supports the following options. 
+*Synology-Docker* supports the following options. 
 
 | Option      | Alias       | Argument   | Description |
 |-------------|-------------|------------|-------------|
@@ -127,6 +127,13 @@ Under the hood, the five different commands invoke a specific workflow or sequen
 | `-f`        | `--force`   |            | Force the update and bypass compatibility check / confirmation check |
 | `-p`        | `--path`    |            | Path of the backup (defaults to current directory) |
 | `-s`        | `--stage`   |            | Stage only, do not replace binaries or the configuration of log driver |
+
+### Known Issues
+Using *Synology-Docker* to update your Synology Docker package is known to bring a few issues. They are listed below, including their workaround.
+
+* **Containers cannot be launched via Docker UI** (see [issue #21][issue_launch]) - The Synology Docker package comes with a user interface (UI) to monitor and launch containers. Unfortunately, the launching of containers via the UI no longer works after having upgraded Docker with *Synology-Docker*. This could be caused by the specific Docker logging driver of Synology. Launching containers from the command line (via either Docker or Docker Compose) still works. [Portainer][portainer] could also be an alternative, but has not been tested by the author yet.
+* **Containers cannot be reached in bridge mode** (see [issue #12][issue_bridge]) - Setting up Docker on your Synology with the synology-docker script might result in difficulty connecting with containers in bridge mode. Potential workarounds are to deploy your services in a Docker stack, or to setup a [macvlan][macvlan] network.
+* **Docker service can be prevented to shut down properly** (see [issue #20][issue_timeout]) - The `synoservicectl` daemon does not always terminate as expected, possibly due to a conflict with Docker's live restore functionality. Home Assistant is a known example to use live restore. Manually shutting down the container(s) will ensure *Synology-Docker* runs correctly.
 
 
 ## Contributing
@@ -165,6 +172,12 @@ Copyright © [Mark Dumay][blog]
 [markus_renew]: https://lippertmarkus.com/2020/03/14/synology-le-dns-auto-renew/
 [swarm_init]: https://docs.docker.com/engine/reference/commandline/swarm_init/
 [xfelix_letsencrypt]: https://www.xfelix.com/2017/06/synology-letsencrypt-dns-01-cert-issue-and-install/
+[portainer]: https://www.portainer.io
+[issue_bridge]: https://github.com/markdumay/synology-docker/issues/12
+[issue_timeout]: https://github.com/markdumay/synology-docker/issues/20
+[issue_launch]: https://github.com/markdumay/synology-docker/issues/21
+[macvlan]: [https://blog.oddbit.com/post/2018-03-12-using-docker-macvlan-networks/]
+
 
 <!-- MARKDOWN MAINTAINED LINKS -->
 <!-- TODO: add blog link
