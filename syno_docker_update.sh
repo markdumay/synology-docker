@@ -540,7 +540,7 @@ execute_stop_syno() {
         if [ "${syno_status}" = 'running' ] ; then
             timeout "${SYNO_SERVICE_TIMEOUT}" synoservicectl --stop "${SYNO_DOCKER_SERV_NAME}"
             syno_status=$(synoservicectl --status "${SYNO_DOCKER_SERV_NAME}" | grep stop -o)
-            if [ "${syno_status}" = 'stop' ] ; then
+            if [ "${syno_status}" != 'stop' ] ; then
                 terminate "Could not stop Docker daemon"
             fi
         fi
