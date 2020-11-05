@@ -205,10 +205,12 @@ validate_available_versions() {
 validate_downloaded_versions() {
     target_docker_bin="docker-${target_docker_version}.tgz"
     # Test Docker archive is available on path
+    target_docker_bin="docker-${target_docker_version}.tgz"
     if [ ! -f "${download_dir}/${target_docker_bin}" ] ; then
         terminate "Could not find Docker archive (${download_dir}/${target_docker_bin})"
     fi
 
+    # Test Docker-compose binary is available on path
     if [ ! -f "${download_dir}/docker-compose" ] ; then 
         terminate "Could not find Docker compose binary (${download_dir}/docker-compose)"
     fi
