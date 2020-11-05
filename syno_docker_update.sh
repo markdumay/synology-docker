@@ -473,7 +473,7 @@ execute_restore_bin() {
         cp "${temp_dir}"/docker/* "${SYNO_DOCKER_BIN}"/
         chmod +x "${SYNO_DOCKER_BIN}"/*
     else
-        echo "Skipping restoring in STAGE mode"
+        echo "Skipping restore in STAGE mode"
     fi
 }
 
