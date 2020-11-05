@@ -65,7 +65,14 @@ total_steps=0
 # Helper Functions
 #======================================================================================================================
 
-# Display usage message
+#======================================================================================================================
+# Display usage message.
+#======================================================================================================================
+# Globals:
+#   - backup_dir
+# Outputs:
+#   Writes message to stdout.
+#======================================================================================================================
 usage() { 
     echo "Usage: $0 [OPTIONS] COMMAND" 
     echo
@@ -112,7 +119,19 @@ print_status() {
     printf "${BOLD}%s${NC}\n" "Step ${step} from ${total_steps}: $1"
 }
 
-# Detects current versions for DSM, Docker, and Docker Compose
+#======================================================================================================================
+# Detects the current versions for DSM, Docker, and Docker Compose and displays them on the console. It also verifies
+# the host runs DSM and that Docker (including Compose) is already installed, unless 'force' is set to true.
+#======================================================================================================================
+# Globals:
+#   - dsm_version
+#   - dsm_major_version
+#   - docker_version
+#   - compose_version
+#   - force
+# Outputs:
+#   Writes message to stdout. Terminates with non-zero exit code if host is incompatible, unless 'force' is true.
+#======================================================================================================================
 detect_current_versions() {
     # Detect current DSM version
     dsm_version=$(test -f '/etc.defaults/VERSION' && < '/etc.defaults/VERSION' grep '^productversion' | \
@@ -134,7 +153,16 @@ detect_current_versions() {
     fi
 }
 
-# Validates current versions for DSM, Docker, and Docker Compose
+#======================================================================================================================
+# Verifies the host runs DSM and that Docker (including Compose) is already installed.
+#======================================================================================================================
+# Globals:
+#   - dsm_version
+#   - docker_version
+#   - compose_version
+# Outputs:
+#   Terminates with non-zero exit code if host is incompatible.
+#======================================================================================================================
 validate_current_version() {
     # Test if host is DSM 6, exit otherwise
     if [ "${dsm_major_version}" != "${DSM_SUPPORTED_VERSION}" ] ; then
@@ -152,7 +180,15 @@ validate_current_version() {
     fi
 }
 
-# Detects Docker versions downloaded on disk
+#======================================================================================================================
+# Detects Docker versions downloaded on disk and updates the target Docker version accordingly. Downloads are ignored
+# if a specific target Docker version is already specified.
+#======================================================================================================================
+# Globals:
+#   - target_docker_version
+# Outputs:
+#   Updated 'target_docker_version'.
+#======================================================================================================================
 detect_available_downloads() {
     if [ -z "${target_docker_version}" ] ; then
         downloads=$(find "${download_dir}/" -maxdepth 1 -type f | cut -c 4- | \
@@ -162,7 +198,17 @@ detect_available_downloads() {
     fi
 }
 
-# Detects available versions for Docker and Docker Compose
+#======================================================================================================================
+# Detects latest stable versions of Docker and Docker Compose available for download. The detection is skipped if a 
+# specific target Docker and/or Compose version is already specified. Default versions are assigned if the detection
+# fails for some reason.
+#======================================================================================================================
+# Globals:
+#   - target_docker_version
+#   - target_compose_version
+# Outputs:
+#   Updated 'target_docker_version' and 'target_compose_version'.
+#======================================================================================================================
 detect_available_versions() {
     # Detect latest available Docker version
     if [ -z "${target_docker_version}" ] ; then
@@ -188,7 +234,15 @@ detect_available_versions() {
     fi
 }
 
-# Validates available updates for Docker and Docker Compose
+#======================================================================================================================
+# Validates the target versions for Docker and Docker Compose are defined, exits otherwise.
+#======================================================================================================================
+# Globals:
+#   - target_docker_version
+#   - target_compose_version
+# Outputs:
+#   Terminates with non-zero exit code if target version is unavailable for either Docker or Docker Compose.
+#======================================================================================================================
 validate_available_versions() {
     # Test Docker is available for download, exit otherwise
     if [ -z "${target_docker_version}" ] ; then
@@ -201,9 +255,19 @@ validate_available_versions() {
     fi
 }
 
-# Validates downloads for Docker and Docker Compose
+#======================================================================================================================
+# Validates downloaded files for Docker and Docker Compose are available on the download path. The Docker binaries are 
+# expected to be present as tar archive, whilst Docker compose should be a single binary file. The script exits if
+# either file is missing.
+#======================================================================================================================
+# Globals:
+#   - download_dir
+#   - target_docker_version
+#   - target_compose_version
+# Outputs:
+#   Terminates with non-zero exit code if downloaded files for either Docker or Docker Compose are unavailable.
+#======================================================================================================================
 validate_downloaded_versions() {
-    target_docker_bin="docker-${target_docker_version}.tgz"
     # Test Docker archive is available on path
     target_docker_bin="docker-${target_docker_version}.tgz"
     if [ ! -f "${download_dir}/${target_docker_bin}" ] ; then
@@ -216,7 +280,16 @@ validate_downloaded_versions() {
     fi
 }
 
-# Validates user input conforms to expected version pattern
+#======================================================================================================================
+# Validates if a provided version string conforms to the expected pattern. The pattern should resemble 
+# 'major.minor.revision'. For example, '6.2.3' is a valid version string, while '6.1' is not.
+#======================================================================================================================
+# Arguments:
+#   $1 - Version string to be verified.
+#   $2 - Error message.
+# Outputs:
+#   Terminates with non-zero exit code if the version string does conform to the expected pattern.
+#======================================================================================================================
 validate_version_input() {
     validation=$(echo "$1" | grep -Eo "^[0-9]+.[0-9]+.[0-9]+")
     if [ "${validation}" != "$1" ] ; then
@@ -225,7 +298,18 @@ validate_version_input() {
     fi
 }
 
-# Validates provided backup filename
+#======================================================================================================================
+# Verifies if the provided filename for the Docker backup is provided, exists otherwise. The backup directory and 
+# backup filename are updated if the filename contains a path.
+#======================================================================================================================
+# Globals:
+#   - backup_dir
+#   - docker_backup_filename
+# Arguments:
+#   $1 - Error message.
+# Outputs:
+#   Terminates with non-zero exit code if the provided backup filename is missing.
+#======================================================================================================================
 validate_backup_filename() {
     # check filename is provided
     prefix=$(echo "${docker_backup_filename}" | cut -c1)
@@ -244,7 +328,19 @@ validate_backup_filename() {
     fi
 }
 
-# Validates provided path is available
+#======================================================================================================================
+# Verifies if the provided download directory is provided and available, exists otherwise. The download directory is
+# formatted as absolute path.
+#======================================================================================================================
+# Globals:
+#   - download_dir
+# Arguments:
+#   $1 - Error message when path is not specified
+#   $2 - Error message when path is not found
+# Outputs:
+#   Terminates with non-zero exit code if the provided download path is missing or unavailable. Formats the download 
+#   directory as absolute path.
+#======================================================================================================================
 validate_provided_download_path() {
     # check PATH is provided
     prefix=$(echo "${download_dir}" | cut -c1)
@@ -263,7 +359,21 @@ validate_provided_download_path() {
     fi
 }
 
-# Validates provided path is available
+#======================================================================================================================
+# Verifies if the provided backup directory is provided and available, exists otherwise. The backup directory should
+# also differ from the temp path, to avoid accidentaly removing the backup files. The backup directory is formatted as 
+# absolute path.
+#======================================================================================================================
+# Globals:
+#   - backup_dir
+# Arguments:
+#   $1 - Error message when path is not specified
+#   $2 - Error message when path is not found
+#   $3 - Error message when backup path equals temp directory
+# Outputs:
+#   Terminates with non-zero exit code if the provided backup path is missing, unavailable, or invalid. Formats the 
+#   backup directory as absolute path.
+#======================================================================================================================
 validate_provided_backup_path() {
     # check PATH is provided
     prefix=$(echo "${backup_dir}" | cut -c1)
@@ -288,7 +398,23 @@ validate_provided_backup_path() {
     fi
 }
 
-# Defines update strategy for Docker and Docker Compose
+#======================================================================================================================
+# Validates if the target version for either Docker or Docker Compose is newer than the currently installed version.
+# Terminates the script if both Docker and Docker Compose are already up to date, unless an update is forced. 
+# Individual updates for either Docker or Docker Compose are skipped if they are already update to date, unless forced.
+#======================================================================================================================
+# Globals:
+#   - compose_version
+#   - docker_version
+#   - force
+#   - skip_compose_update
+#   - skip_docker_update
+#   - target_compose_version
+#   - target_docker_version
+#   - total_steps
+# Outputs:
+#   Terminates with non-zero exit code if both Docker and Docker Compose are already up to date, unless forced.
+#======================================================================================================================
 define_update() {
     if [ "${force}" != 'true' ] ; then
         if [ "${docker_version}" = "${target_docker_version}" ] && \
@@ -306,12 +432,28 @@ define_update() {
     fi
 }
 
+#======================================================================================================================
+# Verifies a backup file is provided as argument for a restore operation.
+#======================================================================================================================
+# Globals:
+#   - backup_filename_flag
+# Outputs:
+#   Terminates with non-zero exit code if no backup file is provided.
+#======================================================================================================================
 define_restore() {
     if [ "${backup_filename_flag}" != 'true' ]; then
         terminate "Please specify backup filename (--backup NAME)"
     fi
 }
 
+#======================================================================================================================
+# Defines the target versions for Docker and Docker Compose. See detect_available_versions() and 
+# validate_available_versions() for additional information.
+#======================================================================================================================
+# Globals:
+#   - target_compose_version
+#   - target_docker_version
+#======================================================================================================================
 define_target_version() {
     detect_available_versions
     echo "Target Docker version: ${target_docker_version:-Unknown}"
@@ -319,6 +461,13 @@ define_target_version() {
     validate_available_versions
 }
 
+#======================================================================================================================
+# Identifies the version of a downloaded Docker archive. See detect_available_downloads() for additional 
+# information.
+#======================================================================================================================
+# Globals:
+#   - target_docker_version
+#======================================================================================================================
 define_target_download() {
     detect_available_downloads
     echo "Target Docker version: ${target_docker_version:-Unknown}"
@@ -326,6 +475,14 @@ define_target_download() {
     validate_downloaded_versions
 }
 
+#======================================================================================================================
+# Prompts the user to confirm the operation, unless forced.
+#======================================================================================================================
+# Globals:
+#   - force
+# Outputs:
+#   Terminates with zero exit code if user does not confirm the operation.
+#======================================================================================================================
 confirm_operation() {
     if [ "${force}" != 'true' ] ; then
         echo
@@ -353,27 +510,49 @@ confirm_operation() {
 # Workflow Functions
 #======================================================================================================================
 
-# Prepare temp environment
+#======================================================================================================================
+# Recreates an empty temp folder.
+#======================================================================================================================
+# Globals:
+#   - temp_dir
+# Outputs:
+#   An empty temp folder.
+#======================================================================================================================
 execute_prepare() {
     execute_clean 'silent'
     mkdir -p "${temp_dir}"
 }
 
-# Stop Docker service if running
+#======================================================================================================================
+# Stops a running Docker daemon by invoking 'synoservicectl', unless 'stage' is set to true.
+#======================================================================================================================
+# Globals:
+#   - stage
+# Outputs:
+#   Stopped Docker daemon.
+#======================================================================================================================
 execute_stop_syno() {
     print_status "Stopping Docker service"
 
     if [ "${stage}" = 'false' ] ; then
         syno_status=$(synoservicectl --status "${SYNO_DOCKER_SERV_NAME}" | grep running -o)
         if [ "${syno_status}" = 'running' ] ; then
-            synoservicectl --stop $SYNO_DOCKER_SERV_NAME
+            synoservicectl --stop "${SYNO_DOCKER_SERV_NAME}"
         fi
     else
         echo "Skipping Docker service control in STAGE mode"
     fi
 }
 
-# Backup current Docker binaries
+#======================================================================================================================
+# Creates a backup of the current Docker binaries (including Docker Compose) and Docker daemon configuration.
+#======================================================================================================================
+# Globals:
+#   - backup_dir
+#   - docker_backup_filename
+# Outputs:
+#   A backup archive.
+#======================================================================================================================
 execute_backup() {
     print_status "Backing up current Docker binaries (${backup_dir}/${docker_backup_filename})"
     cd "${backup_dir}" || terminate "Backup directory does not exist"
@@ -383,7 +562,16 @@ execute_backup() {
     fi
 }
 
-# Download target Docker binary
+#======================================================================================================================
+# Downloads the targeted Docker binary archive, unless instructed to skip the download.
+#======================================================================================================================
+# Globals:
+#   - download_dir
+#   - skip_docker_update
+#   - target_docker_version
+# Outputs:
+#   A downloaded Docker binaries archive, or a non-zero exit code if the download has failed.
+#======================================================================================================================
 execute_download_bin() {
     if [ "${skip_docker_update}" = 'false' ] ; then
         target_docker_bin="docker-${target_docker_version}.tgz"
@@ -396,7 +584,17 @@ execute_download_bin() {
     fi
 }
 
-# Extract target Docker binary
+#======================================================================================================================
+# Extracts a downloaded Docker binaries archive in the temp folder, unless instructed to skip the update.
+#======================================================================================================================
+# Globals:
+#   - download_dir
+#   - skip_docker_update
+#   - target_docker_version
+#   - temp_dir
+# Outputs:
+#   An extracted Docker binaries archive, or a non-zero exit code if the extraction has failed.
+#======================================================================================================================
 execute_extract_bin() {
     if [ "${skip_docker_update}" = 'false' ] ; then
         target_docker_bin="docker-${target_docker_version}.tgz"
@@ -414,8 +612,17 @@ execute_extract_bin() {
     fi
 }
 
-# Extract target Docker binary
 # TODO: fix
+#======================================================================================================================
+# Extracts a Docker binaries backup archive in the temp folder.
+#======================================================================================================================
+# Globals:
+#   - backup_dir
+#   - docker_backup_filename
+#   - temp_dir
+# Outputs:
+#   An extracted Docker binaries archive, or a non-zero exit code if expected files are not present in the backup.
+#======================================================================================================================
 execute_extract_backup() {
     print_status "Extracting Docker backup (${backup_dir}/${docker_backup_filename})"
 
@@ -439,6 +646,16 @@ execute_extract_backup() {
 }
 
 # TODO: fix x86_64
+#======================================================================================================================
+# Downloads the targeted Docker Compose binary, unless instructed to skip the download.
+#======================================================================================================================
+# Globals:
+#   - download_dir
+#   - skip_compose_update
+#   - target_compose_version
+# Outputs:
+#   A downloaded Docker Compose binary, or a non-zero exit code if the download has failed.
+#======================================================================================================================
 execute_download_compose() {
     if [ "${skip_compose_update}" = 'false' ] ; then
         compose_bin="${DOWNLOAD_GITHUB}/releases/download/${target_compose_version}/docker-compose-Linux-x86_64"
@@ -450,7 +667,19 @@ execute_download_compose() {
     fi
 }
 
-# Install binaries
+#======================================================================================================================
+# Install the Docker and Docker Compose binaries, unless instructed to skip installation or when 'stage' is set to 
+# true.
+#======================================================================================================================
+# Globals:
+#   - download_dir
+#   - skip_compose_update
+#   - skip_docker_update
+#   - stage
+#   - temp_dir
+# Outputs:
+#   Installed Docker and Docker Compose binaries.
+#======================================================================================================================
 execute_install_bin() {
     print_status "Installing binaries"
     if [ "${stage}" = 'false' ] ; then
@@ -466,7 +695,15 @@ execute_install_bin() {
     fi
 }
 
-# Restore binaries
+#======================================================================================================================
+# Restores the Docker and Docker Compose binaries extracted from a backup archive, unless 'stage' is set to true.
+#======================================================================================================================
+# Globals:
+#   - stage
+#   - temp_dir
+# Outputs:
+#   Restored Docker and Docker Compose binaries.
+#======================================================================================================================
 execute_restore_bin() {
     print_status "Restoring binaries"
     if [ "${stage}" = 'false' ] ; then
@@ -477,7 +714,14 @@ execute_restore_bin() {
     fi
 }
 
-# Configure log driver
+#======================================================================================================================
+# Updates the log driver of the Docker daemon, unless 'stage' is set to true.
+#======================================================================================================================
+# Globals:
+#   - stage
+# Outputs:
+#   Updated Docker daemon configuration.
+#======================================================================================================================
 execute_update_log() {
     print_status "Configuring log driver"
     if [ "${stage}" = 'false' ] ; then
@@ -491,7 +735,15 @@ execute_update_log() {
     fi
 }
 
-# Restore log driver
+#======================================================================================================================
+# Restores the Docker daemon log driver extracted from a backup archive, unless 'stage' is set to true.
+#======================================================================================================================
+# Globals:
+#   - stage
+#   - temp_dir
+# Outputs:
+#   Updated Docker daemon configuration.
+#======================================================================================================================
 execute_restore_log() {
     print_status "Restoring log driver"
     if [ "${stage}" = 'false' ] ; then
@@ -501,7 +753,15 @@ execute_restore_log() {
     fi
 }
 
-# Start Docker service
+#======================================================================================================================
+# Start the Docker daemon by invoking 'synoservicectl', unless 'stage' is set to true.
+#======================================================================================================================
+# Globals:
+#   - force
+#   - stage
+# Outputs:
+#   Started Docker daemon, or a non-zero exit code if the start failed.
+#======================================================================================================================
 execute_start_syno() {
     print_status "Starting Docker service"
 
@@ -521,7 +781,16 @@ execute_start_syno() {
     fi
 }
 
-# Clean the temp folder
+#======================================================================================================================
+# Removes the temp folder.
+#======================================================================================================================
+# Globals:
+#   - temp_dir
+# Arguments:
+#   $1 - Silences any status messages if set to 'silent'
+# Outputs:
+#   Removed temp folder.
+#======================================================================================================================
 execute_clean() {
     if [ "$1" != 'silent' ] ; then
         print_status "Cleaning the temp folder"
