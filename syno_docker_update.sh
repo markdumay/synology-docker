@@ -16,23 +16,9 @@
 #======================================================================================================================
 # Constants
 #======================================================================================================================
-RED='\033[0;31m' # Red color
-GREEN='\033[0;32m' # Green color
-NC='\033[0m' # No Color
-BOLD='\033[1m' #Bold color
-DSM_SUPPORTED_VERSION=6
-DEFAULT_DOCKER_VERSION='19.03.12'
-DEFAULT_COMPOSE_VERSION='1.26.2'
-DOWNLOAD_DOCKER=https://download.docker.com/linux/static/stable/x86_64
-DOWNLOAD_GITHUB=https://github.com/docker/compose
-GITHUB_API_COMPOSE=https://api.github.com/repos/docker/compose/releases/latest
-SYNO_DOCKER_SERV_NAME=pkgctl-Docker
-SYNO_DOCKER_DIR=/var/packages/Docker
-SYNO_DOCKER_BIN_PATH=$SYNO_DOCKER_DIR/target/usr
-SYNO_DOCKER_BIN=$SYNO_DOCKER_BIN_PATH/bin
-SYNO_DOCKER_JSON_PATH=$SYNO_DOCKER_DIR/etc
-SYNO_DOCKER_JSON=$SYNO_DOCKER_JSON_PATH/dockerd.json
-SYNO_DOCKER_JSON_CONFIG="{
+readonly DEFAULT_DOCKER_VERSION='19.03.13'
+readonly DEFAULT_COMPOSE_VERSION='1.27.4'
+readonly DOWNLOAD_DOCKER=https://download.docker.com/linux/static/stable/x86_64
     \"data-root\" : \"$SYNO_DOCKER_DIR/target/docker\",
     \"log-driver\" : \"json-file\",
     \"registry-mirrors\" : [],
