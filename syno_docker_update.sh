@@ -155,7 +155,8 @@ validate_current_version() {
 # Detects Docker versions downloaded on disk
 detect_available_downloads() {
     if [ -z "${target_docker_version}" ] ; then
-        downloads=$(find "${download_dir}/" -maxdepth 1 -type f | cut -c 4- | grep -Eo 'docker-[0-9]*.[0-9]*.[0-9]*(-ce)?.tgz')
+        downloads=$(find "${download_dir}/" -maxdepth 1 -type f | cut -c 4- | \
+            grep -Eo 'docker-[0-9]*.[0-9]*.[0-9]*(-ce)?.tgz')
         latest_download=$(echo "${downloads}" | sort -bt. -k1,1 -k2,2n -k3,3n -k4,4n -k5,5n | tail -1)
         target_docker_version=$(echo "${latest_download}" | sed "s/docker-//g" | sed "s/.tgz//g")
     fi
@@ -165,7 +166,8 @@ detect_available_downloads() {
 detect_available_versions() {
     # Detect latest available Docker version
     if [ -z "${target_docker_version}" ] ; then
-        docker_bin_files=$(curl -s "${DOWNLOAD_DOCKER}/" | grep -Eo '>docker-[0-9]*.[0-9]*.[0-9]*(-ce)?.tgz' | cut -c 2-)
+        docker_bin_files=$(curl -s "${DOWNLOAD_DOCKER}/" | grep -Eo '>docker-[0-9]*.[0-9]*.[0-9]*(-ce)?.tgz' | \
+            cut -c 2-)
         latest_docker_bin=$(echo "${docker_bin_files}" | sort -bt. -k1,1 -k2,2n -k3,3n -k4,4n -k5,5n | tail -1)
         target_docker_version=$(echo "${latest_docker_bin}" | sed "s/docker-//g" | sed "s/.tgz//g" )
 
@@ -287,8 +289,8 @@ validate_provided_backup_path() {
 # Defines update strategy for Docker and Docker Compose
 define_update() {
     if [ "${force}" != 'true' ] ; then
-        # Confirm update is necessary
-        if [ "${docker_version}" = "${target_docker_version}" ] && [ "${compose_version}" = "${target_compose_version}" ] ; then
+        if [ "${docker_version}" = "${target_docker_version}" ] && \
+            [ "${compose_version}" = "${target_compose_version}" ] ; then
             terminate "Already on target version for Docker and Docker Compose"
         fi
         if [ "${docker_version}" = "${target_docker_version}" ] ; then
@@ -384,7 +386,8 @@ execute_download_bin() {
     if [ "${skip_docker_update}" = 'false' ] ; then
         target_docker_bin="docker-${target_docker_version}.tgz"
         print_status "Downloading target Docker binary (${DOWNLOAD_DOCKER}/${target_docker_bin})"
-        response=$(curl "${DOWNLOAD_DOCKER}/$target_docker_bin" --write-out '%{http_code}' -o "${download_dir}/${target_docker_bin}")
+        response=$(curl "${DOWNLOAD_DOCKER}/$target_docker_bin" --write-out '%{http_code}' \
+            -o "${download_dir}/${target_docker_bin}")
         if [ "${response}" != 200 ] ; then 
             terminate "Binary could not be downloaded"
         fi
