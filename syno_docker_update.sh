@@ -5,7 +5,7 @@
 # Description   : An Unofficial Script to Update or Restore Docker Engine and Docker Compose on Synology
 # Author        : Mark Dumay
 # Date          : November 5th, 2020
-# Version       : 1.1.0
+# Version       : 1.1.1
 # Usage         : sudo ./syno_docker_update.sh [OPTIONS] COMMAND
 # Repository    : https://github.com/markdumay/synology-docker.git
 # License       : MIT - https://github.com/markdumay/synology-docker/blob/master/LICENSE
@@ -26,6 +26,7 @@ readonly DOWNLOAD_DOCKER=https://download.docker.com/linux/static/stable/x86_64
 readonly DOWNLOAD_GITHUB=https://github.com/docker/compose
 readonly GITHUB_API_COMPOSE=https://api.github.com/repos/docker/compose/releases/latest
 readonly SYNO_DOCKER_SERV_NAME=pkgctl-Docker
+readonly SYNO_SERVICE_TIMEOUT='5m'
 readonly SYNO_DOCKER_DIR=/var/packages/Docker
 readonly SYNO_DOCKER_BIN_PATH=$SYNO_DOCKER_DIR/target/usr
 readonly SYNO_DOCKER_BIN=$SYNO_DOCKER_BIN_PATH/bin
@@ -529,7 +530,7 @@ execute_prepare() {
 # Globals:
 #   - stage
 # Outputs:
-#   Stopped Docker daemon.
+#   Stopped Docker daemon, or a non-zero exit code if the stop failed or timed out.
 #======================================================================================================================
 execute_stop_syno() {
     print_status "Stopping Docker service"
@@ -537,7 +538,11 @@ execute_stop_syno() {
     if [ "${stage}" = 'false' ] ; then
         syno_status=$(synoservicectl --status "${SYNO_DOCKER_SERV_NAME}" | grep running -o)
         if [ "${syno_status}" = 'running' ] ; then
-            synoservicectl --stop "${SYNO_DOCKER_SERV_NAME}"
+            timeout "${SYNO_SERVICE_TIMEOUT}" synoservicectl --stop "${SYNO_DOCKER_SERV_NAME}"
+            syno_status=$(synoservicectl --status "${SYNO_DOCKER_SERV_NAME}" | grep stop -o)
+            if [ "${syno_status}" != 'stop' ] ; then
+                terminate "Could not stop Docker daemon"
+            fi
         fi
     else
         echo "Skipping Docker service control in STAGE mode"
@@ -760,13 +765,13 @@ execute_restore_log() {
 #   - force
 #   - stage
 # Outputs:
-#   Started Docker daemon, or a non-zero exit code if the start failed.
+#   Started Docker daemon, or a non-zero exit code if the start failed or timed out.
 #======================================================================================================================
 execute_start_syno() {
     print_status "Starting Docker service"
 
     if [ "${stage}" = 'false' ] ; then
-        synoservicectl --start "${SYNO_DOCKER_SERV_NAME}"
+        timeout "${SYNO_SERVICE_TIMEOUT}" synoservicectl --start "${SYNO_DOCKER_SERV_NAME}"
 
         syno_status=$(synoservicectl --status "${SYNO_DOCKER_SERV_NAME}" | grep running -o)
         if [ "${syno_status}" != 'running' ] ; then
