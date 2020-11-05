@@ -167,8 +167,7 @@ detect_available_versions() {
     if [ -z "${target_docker_version}" ] ; then
         docker_bin_files=$(curl -s "${DOWNLOAD_DOCKER}/" | grep -Eo '>docker-[0-9]*.[0-9]*.[0-9]*(-ce)?.tgz' | cut -c 2-)
         latest_docker_bin=$(echo "${docker_bin_files}" | sort -bt. -k1,1 -k2,2n -k3,3n -k4,4n -k5,5n | tail -1)
-        latest_docker_version=$(echo "${latest_docker_bin}" | sed "s/docker-//g" | sed "s/.tgz//g" )
-        target_docker_version="${latest_docker_version}"
+        target_docker_version=$(echo "${latest_docker_bin}" | sed "s/docker-//g" | sed "s/.tgz//g" )
 
         if [ -z "${target_docker_version}" ] ; then
             echo "Could not detect Docker versions available for download, setting default value"
