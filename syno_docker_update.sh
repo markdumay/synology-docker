@@ -5,7 +5,7 @@
 # Description   : An Unofficial Script to Update or Restore Docker Engine and Docker Compose on Synology
 # Author        : Mark Dumay
 # Date          : November 5th, 2020
-# Version       : 1.1.1
+# Version       : 1.1.2
 # Usage         : sudo ./syno_docker_update.sh [OPTIONS] COMMAND
 # Repository    : https://github.com/markdumay/synology-docker.git
 # License       : MIT - https://github.com/markdumay/synology-docker/blob/master/LICENSE
@@ -22,7 +22,8 @@ readonly BOLD='\e[1m' # Bold font
 readonly DSM_SUPPORTED_VERSION=6
 readonly DEFAULT_DOCKER_VERSION='19.03.13'
 readonly DEFAULT_COMPOSE_VERSION='1.27.4'
-readonly DOWNLOAD_DOCKER=https://download.docker.com/linux/static/stable/x86_64
+readonly CPU_ARCH='x86_64'
+readonly DOWNLOAD_DOCKER="https://download.docker.com/linux/static/stable/${CPU_ARCH}"
 readonly DOWNLOAD_GITHUB=https://github.com/docker/compose
 readonly GITHUB_API_COMPOSE=https://api.github.com/repos/docker/compose/releases/latest
 readonly SYNO_DOCKER_SERV_NAME=pkgctl-Docker
@@ -155,7 +156,7 @@ detect_current_versions() {
 }
 
 #======================================================================================================================
-# Verifies the host runs DSM and that Docker (including Compose) is already installed.
+# Verifies the host has the right CPU, runs DSM and that Docker (including Compose) is already installed.
 #======================================================================================================================
 # Globals:
 #   - dsm_version
@@ -165,6 +166,12 @@ detect_current_versions() {
 #   Terminates with non-zero exit code if host is incompatible.
 #======================================================================================================================
 validate_current_version() {
+    # Test host has supported CPU, exit otherwise
+    current_arch=$(uname -m)
+    if [ "${current_arch}" != "${CPU_ARCH}" ]; then
+        terminate "This script supports ${CPU_ARCH} CPUs only, use --force to override"
+    fi
+
     # Test if host is DSM 6, exit otherwise
     if [ "${dsm_major_version}" != "${DSM_SUPPORTED_VERSION}" ] ; then
         terminate "This script supports DSM 6.x only, use --force to override"
@@ -650,7 +657,6 @@ execute_extract_backup() {
     fi
 }
 
-# TODO: fix x86_64
 #======================================================================================================================
 # Downloads the targeted Docker Compose binary, unless instructed to skip the download.
 #======================================================================================================================
@@ -663,7 +669,7 @@ execute_extract_backup() {
 #======================================================================================================================
 execute_download_compose() {
     if [ "${skip_compose_update}" = 'false' ] ; then
-        compose_bin="${DOWNLOAD_GITHUB}/releases/download/${target_compose_version}/docker-compose-Linux-x86_64"
+        compose_bin="${DOWNLOAD_GITHUB}/releases/download/${target_compose_version}/docker-compose-Linux-${CPU_ARCH}"
         print_status "Downloading target Docker Compose binary (${compose_bin})"
         response=$(curl -L "${compose_bin}" --write-out '%{http_code}' -o "${download_dir}/docker-compose")
         if [ "${response}" != 200 ] ; then 
