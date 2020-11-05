@@ -438,7 +438,7 @@ execute_extract_backup() {
     fi
 }
 
-# Download target Docker Compose binary
+# TODO: fix x86_64
 execute_download_compose() {
     if [ "${skip_compose_update}" = 'false' ] ; then
         compose_bin="${DOWNLOAD_GITHUB}/releases/download/${target_compose_version}/docker-compose-Linux-x86_64"
