@@ -129,10 +129,11 @@ Under the hood, the five different commands invoke a specific workflow or sequen
 | `-s`        | `--stage`   |            | Stage only, do not replace binaries or the configuration of log driver |
 
 ### Known Issues
-Using *Synology-Docker* to update your Synology Docker package is known to bring a few issues. They are listed below, including their workaround.
+Using *Synology-Docker* to update your Synology Docker package is known to bring a few issues. They are listed below, including their workaround if available.
 
 * **Containers cannot be launched via Docker UI** (see [issue #21][issue_launch]) - The Synology Docker package comes with a user interface (UI) to monitor and launch containers. Unfortunately, the launching of containers via the UI no longer works after having upgraded Docker with *Synology-Docker*. This could be caused by the specific Docker logging driver of Synology. Launching containers from the command line (via either Docker or Docker Compose) still works. [Portainer][portainer] could also be an alternative, but has not been tested by the author yet.
 * **Containers cannot be reached in bridge mode** (see [issue #12][issue_bridge]) - Setting up Docker on your Synology with the synology-docker script might result in difficulty connecting with containers in bridge mode. Potential workarounds are to deploy your services in a Docker stack, or to setup a [macvlan][macvlan] network.
+* **The update is incompatible with BTRFS volumes** (see [isse #22][issue_btrfs]) - Launching containers could result in an error `Failed to create btrfs snapshot: inappropriate ioctl for device` on volumes formatted with BTRFS. No workaround is available yet.
 * **Docker service can be prevented to shut down properly** (see [issue #20][issue_timeout]) - The `synoservicectl` daemon does not always terminate as expected, possibly due to a conflict with Docker's live restore functionality. Home Assistant is a known example to use live restore. Manually shutting down the container(s) will ensure *Synology-Docker* runs correctly.
 
 
@@ -176,6 +177,7 @@ Copyright © [Mark Dumay][blog]
 [issue_bridge]: https://github.com/markdumay/synology-docker/issues/12
 [issue_timeout]: https://github.com/markdumay/synology-docker/issues/20
 [issue_launch]: https://github.com/markdumay/synology-docker/issues/21
+[issue_btrfs]: https://github.com/markdumay/synology-docker/issues/22
 [macvlan]: [https://blog.oddbit.com/post/2018-03-12-using-docker-macvlan-networks/]
 
 
