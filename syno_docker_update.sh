@@ -702,6 +702,7 @@ execute_install_bin() {
         fi
         chown root:root "${SYNO_DOCKER_BIN}"/*
         chmod +x "${SYNO_DOCKER_BIN}"/*
+        mkdir -p /var/lib/docker/volumes  # creates folder to improve compatability for some containers
     else
         echo "Skipping installation in STAGE mode"
     fi
