@@ -721,6 +721,7 @@ execute_restore_bin() {
     print_status "Restoring binaries"
     if [ "${stage}" = 'false' ] ; then
         cp "${temp_dir}"/docker/* "${SYNO_DOCKER_BIN}"/
+        chown root:root "${SYNO_DOCKER_BIN}"/*
         chmod +x "${SYNO_DOCKER_BIN}"/*
     else
         echo "Skipping restore in STAGE mode"
