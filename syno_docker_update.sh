@@ -700,6 +700,7 @@ execute_install_bin() {
         if [ "${skip_compose_update}" = 'false' ] ; then
             cp "${download_dir}"/docker-compose "${SYNO_DOCKER_BIN}"/docker-compose
         fi
+        chown root:root "${SYNO_DOCKER_BIN}"/*
         chmod +x "${SYNO_DOCKER_BIN}"/*
     else
         echo "Skipping installation in STAGE mode"
