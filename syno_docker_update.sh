@@ -24,15 +24,15 @@ readonly DEFAULT_DOCKER_VERSION='19.03.13'
 readonly DEFAULT_COMPOSE_VERSION='1.27.4'
 readonly CPU_ARCH='x86_64'
 readonly DOWNLOAD_DOCKER="https://download.docker.com/linux/static/stable/${CPU_ARCH}"
-readonly DOWNLOAD_GITHUB=https://github.com/docker/compose
-readonly GITHUB_API_COMPOSE=https://api.github.com/repos/docker/compose/releases/latest
-readonly SYNO_DOCKER_SERV_NAME=pkgctl-Docker
+readonly DOWNLOAD_GITHUB='https://github.com/docker/compose'
+readonly GITHUB_API_COMPOSE='https://api.github.com/repos/docker/compose/releases/latest'
+readonly SYNO_DOCKER_SERV_NAME='pkgctl-Docker'
 readonly SYNO_SERVICE_TIMEOUT='5m'
-readonly SYNO_DOCKER_DIR=/var/packages/Docker
-readonly SYNO_DOCKER_BIN_PATH=$SYNO_DOCKER_DIR/target/usr
-readonly SYNO_DOCKER_BIN=$SYNO_DOCKER_BIN_PATH/bin
-readonly SYNO_DOCKER_JSON_PATH=$SYNO_DOCKER_DIR/etc
-readonly SYNO_DOCKER_JSON=$SYNO_DOCKER_JSON_PATH/dockerd.json
+readonly SYNO_DOCKER_DIR='/var/packages/Docker'
+readonly SYNO_DOCKER_BIN_PATH="${SYNO_DOCKER_DIR}/target/usr"
+readonly SYNO_DOCKER_BIN="${SYNO_DOCKER_BIN_PATH}/bin"
+readonly SYNO_DOCKER_JSON_PATH="${SYNO_DOCKER_DIR}/etc"
+readonly SYNO_DOCKER_JSON="${SYNO_DOCKER_JSON_PATH}/dockerd.json"
 readonly SYNO_DOCKER_JSON_CONFIG="{
     \"data-root\" : \"$SYNO_DOCKER_DIR/target/docker\",
     \"log-driver\" : \"json-file\",
