@@ -41,7 +41,7 @@ readonly SYNO_DOCKER_JSON_CONFIG="{
     \"registry-mirrors\" : [],
     \"group\": \"administrators\"
 }"
-readonly SYNO_DOCKER_SCRIPT_FORWARDING='# ensure IP forwarding\n\t\tiptables -P FORWARD ACCEPT\n'
+readonly SYNO_DOCKER_SCRIPT_FORWARDING='# ensure IP forwarding\n\t\tsudo iptables -P FORWARD ACCEPT\n'
 
 
 #======================================================================================================================
