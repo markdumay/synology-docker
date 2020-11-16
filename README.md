@@ -80,40 +80,44 @@ sudo ./syno_docker_update.sh [OPTIONS] COMMAND
 
 | Command        | Argument  | Description |
 |----------------|-----------|-------------|
-| **`backup`**   |           | Create a backup of Docker binaries (including Docker Compose) and `dockerd` configuration |
+| **`backup`**   |           | Create a backup of Docker binaries (including Docker Compose), `dockerd` configuration, and Synology's `start-stop-status` script |
 | **`download`** | PATH      | Download Docker and Docker Compose binaries to *PATH* |
 | **`install`**  | PATH      | Update Docker and Docker Compose from files on *PATH* |
 | **`restore`**  |           | Restore Docker and Docker Compose from a backup |
 | **`update`**   |           | Update Docker and Docker Compose to a target version (creates a backup first) |
 
 Under the hood, the five different commands invoke a specific workflow or sequence of steps. The below table shows the workflows and the order of steps for each of the commands.
-| #  | Workflow step               | backup | download | install | restore | update |
-|----|-----------------------------|--------|----------|---------|---------|--------|
-| A) | Download Docker binary      |        | Step 1   |         |         | Step 1 |
-| B) | Download Compose binary     |        | Step 2   |         |         | Step 2 |
-| C) | Extract files from backup   |        |          |         | Step 1  |        |
-| D) | Stop Docker daemon          | Step 1 |          | Step 1  | Step 2  | Step 3 |
-| E) | Backup current files        | Step 2 |          | Step 2  |         | Step 4 |
-| F) | Extract downloaded binaries |        |          | Step 3  |         | Step 5 |
-| G) | Restore Docker binaries     |        |          |         | Step 3  |        |
-| H) | Install Docker binaries     |        |          | Step 4  |         | Step 6 |
-| I) | Update log driver           |        |          | Step 5  |         | Step 7 |
-| J) | Restore log driver          |        |          |         | Step 4  |        |
-| K) | Start Docker daemon         | Step 3 |          | Step 6  | Step 5  | Step 8 |
-| L) | Clean temp folder           |        |          |         |         | Step 9 |
+| #  | Workflow step               | backup | download | install | restore | update  |
+|----|-----------------------------|--------|----------|---------|---------|---------|
+| A) | Download Docker binary      |        | Step 1   |         |         | Step 1  |
+| B) | Download Compose binary     |        | Step 2   |         |         | Step 2  |
+| C) | Extract files from backup   |        |          |         | Step 1  |         |
+| D) | Stop Docker daemon          | Step 1 |          | Step 1  | Step 2  | Step 3  |
+| E) | Backup current files        | Step 2 |          | Step 2  |         | Step 4  |
+| F) | Extract downloaded binaries |        |          | Step 3  |         | Step 5  |
+| G) | Restore Docker binaries     |        |          |         | Step 3  |         |
+| H) | Install Docker binaries     |        |          | Step 4  |         | Step 6  |
+| I) | Update log driver           |        |          | Step 5  |         | Step 7  |
+| J) | Restore log driver          |        |          |         | Step 4  |         |
+| K) | Update Docker script        |        |          | Step 5  |         | Step 8  |
+| L) | Restore Docker script       |        |          |         | Step 5  |         |
+| M) | Start Docker daemon         | Step 3 |          | Step 6  | Step 6  | Step 9  |
+| N) | Clean temp folder           |        |          |         |         | Step 10 |
 
 * **A) Download Docker binary** - Downloads an archive containing Docker Engine binaries from `https://download.docker.com/linux/static/stable/x86_64/docker-${VERSION}.tgz`. The binaries are compatible with the Intel x86 (64 bit) architecture. Unless a specific version is specified by the `--docker` flag, *Synology-Docker` pulls the latest stable version available.
 * **B) Download Compose binary** - Downloads the Docker Compose binary from `https://github.com/docker/compose/releases/download/${VERSION}/docker-compose-Linux-x86_64`. Unless a specific version is specified by the `--compose` flag, *Synology-Docker* pulls the latest stable version available.
 * **C) Extract files from backup** - Extracts the files from a backup archive specified by the `--backup` flag to the temp directory (`/tmp/docker_update`). 
 * **D) Stop Docker daemon** - Stops the Docker daemon by invoking `synoservicectl --stop pkgctl-Docker`.
-* **E) Backup current files** - Creates a backup of the current Docker binaries, including Docker Compose. The configuration of the logging driver is included in the archive too. The files included refer to `/var/packages/Docker/target/usr/bin/*` and `/var/packages/Docker/etc/dockerd.json`.
+* **E) Backup current files** - Creates a backup of the current Docker binaries, including Docker Compose. The configuration of the logging driver and Synology's `start-stop-status` script are included in the archive too. The files included refer to `/var/packages/Docker/target/usr/bin/*`, `/var/packages/Docker/etc/dockerd.json`, and `/var/packages/Docker/scripts/start-stop-status`.
 * **F) Extract downloaded binaries** - Extracts the files from a downloaded archive to the temp directory (`/tmp/docker_update`). 
 * **G) Restore Docker binaries** - Restores the Docker binaries in `/var/packages/Docker/target/usr/bin/*` with the binaries extracted from a backup archive.
 * **H) Install Docker binaries** - Installs downloaded and extracted Docker binaries (including Docker Compose) to the folder `/var/packages/Docker/target/usr/bin/`.
 * **I) Update log driver** - Replaces Synology's log driver with a default log driver `json-file` to improve compatibility. The configuration is updated at `/var/packages/Docker/etc/dockerd.json`
 * **J) Restore log driver** - Restores the log driver (`/var/packages/Docker/etc/dockerd.json`) from the configuration within a backup archive.
-* **K) Start Docker daemon** - Starts the Docker daemon by invoking `synoservicectl --start pkgctl-Docker`.
-* **L) Clean temp folder** - Removes files from the temp directory (`/tmp/docker_update`). The temporary files are created when extracting a downloaded archive or extracting a backup.
+* **K) Update Docker script** - Updates Synology's `start-stop-status` script for Docker to enable IP forwarding. This ensures containers can be properly reached in bridge networking mode. The script is updated at the location `/var/packages/Docker/scripts/start-stop-status`.
+* **L) Restore Docker script** - Restores the `start-stop-status` script (`/var/packages/Docker/scripts/start-stop-status`) from the file within a backup archive.
+* **M) Start Docker daemon** - Starts the Docker daemon by invoking `synoservicectl --start pkgctl-Docker`.
+* **N) Clean temp folder** - Removes files from the temp directory (`/tmp/docker_update`). The temporary files are created when extracting a downloaded archive or extracting a backup.
 
 
 ### Options
@@ -132,9 +136,8 @@ Under the hood, the five different commands invoke a specific workflow or sequen
 Using *Synology-Docker* to update your Synology Docker package is known to bring a few issues. They are listed below, including their workaround if available.
 
 * **Containers cannot be launched via Docker UI** (see [issue #21][issue_launch]) - The Synology Docker package comes with a user interface (UI) to monitor and launch containers. Unfortunately, the launching of containers via the UI no longer works after having upgraded Docker with *Synology-Docker*. This could be caused by the specific Docker logging driver of Synology. Launching containers from the command line (via either Docker or Docker Compose) still works. [Portainer][portainer] could also be an alternative, but has not been tested by the author yet.
-* **Containers cannot be reached in bridge mode** (see [issue #12][issue_bridge]) - Setting up Docker on your Synology with the synology-docker script might result in difficulty connecting with containers in bridge mode. Potential workarounds are to deploy your services in a Docker stack, or to setup a [macvlan][macvlan] network.
 * **The update is incompatible with BTRFS volumes** (see [isse #22][issue_btrfs]) - Launching containers could result in an error `Failed to create btrfs snapshot: inappropriate ioctl for device` on volumes formatted with BTRFS. No workaround is available yet.
-* **Docker service can be prevented to shut down properly** (see [issue #20][issue_timeout]) - The `synoservicectl` daemon does not always terminate as expected, possibly due to a conflict with Docker's live restore functionality. Home Assistant is a known example to use live restore. Manually shutting down the container(s) will ensure *Synology-Docker* runs correctly.
+* **Docker service can be prevented from shutting down properly** (see [issue #20][issue_timeout]) - The `synoservicectl` daemon does not always terminate as expected, possibly due to a conflict with Docker's live restore functionality. Home Assistant is a known example to use live restore. Manually shutting down the container(s) will ensure *Synology-Docker* runs correctly.
 
 
 ## Contributing

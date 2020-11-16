@@ -4,8 +4,8 @@
 # Title         : syno_docker_update.sh
 # Description   : An Unofficial Script to Update or Restore Docker Engine and Docker Compose on Synology
 # Author        : Mark Dumay
-# Date          : November 5th, 2020
-# Version       : 1.1.2
+# Date          : November 16th, 2020
+# Version       : 1.2.0
 # Usage         : sudo ./syno_docker_update.sh [OPTIONS] COMMAND
 # Repository    : https://github.com/markdumay/synology-docker.git
 # License       : MIT - https://github.com/markdumay/synology-docker/blob/master/LICENSE
@@ -24,21 +24,24 @@ readonly DEFAULT_DOCKER_VERSION='19.03.13'
 readonly DEFAULT_COMPOSE_VERSION='1.27.4'
 readonly CPU_ARCH='x86_64'
 readonly DOWNLOAD_DOCKER="https://download.docker.com/linux/static/stable/${CPU_ARCH}"
-readonly DOWNLOAD_GITHUB=https://github.com/docker/compose
-readonly GITHUB_API_COMPOSE=https://api.github.com/repos/docker/compose/releases/latest
-readonly SYNO_DOCKER_SERV_NAME=pkgctl-Docker
+readonly DOWNLOAD_GITHUB='https://github.com/docker/compose'
+readonly GITHUB_API_COMPOSE='https://api.github.com/repos/docker/compose/releases/latest'
+readonly SYNO_DOCKER_SERV_NAME='pkgctl-Docker'
 readonly SYNO_SERVICE_TIMEOUT='5m'
-readonly SYNO_DOCKER_DIR=/var/packages/Docker
-readonly SYNO_DOCKER_BIN_PATH=$SYNO_DOCKER_DIR/target/usr
-readonly SYNO_DOCKER_BIN=$SYNO_DOCKER_BIN_PATH/bin
-readonly SYNO_DOCKER_JSON_PATH=$SYNO_DOCKER_DIR/etc
-readonly SYNO_DOCKER_JSON=$SYNO_DOCKER_JSON_PATH/dockerd.json
+readonly SYNO_DOCKER_DIR='/var/packages/Docker'
+readonly SYNO_DOCKER_BIN_PATH="${SYNO_DOCKER_DIR}/target/usr"
+readonly SYNO_DOCKER_BIN="${SYNO_DOCKER_BIN_PATH}/bin"
+readonly SYNO_DOCKER_SCRIPT_PATH="${SYNO_DOCKER_DIR}/scripts"
+readonly SYNO_DOCKER_SCRIPT="${SYNO_DOCKER_SCRIPT_PATH}/start-stop-status"
+readonly SYNO_DOCKER_JSON_PATH="${SYNO_DOCKER_DIR}/etc"
+readonly SYNO_DOCKER_JSON="${SYNO_DOCKER_JSON_PATH}/dockerd.json"
 readonly SYNO_DOCKER_JSON_CONFIG="{
     \"data-root\" : \"$SYNO_DOCKER_DIR/target/docker\",
     \"log-driver\" : \"json-file\",
     \"registry-mirrors\" : [],
     \"group\": \"administrators\"
 }"
+readonly SYNO_DOCKER_SCRIPT_FORWARDING='# ensure IP forwarding\n\t\tsudo iptables -P FORWARD ACCEPT\n'
 
 
 #======================================================================================================================
@@ -545,7 +548,7 @@ execute_stop_syno() {
     if [ "${stage}" = 'false' ] ; then
         syno_status=$(synoservicectl --status "${SYNO_DOCKER_SERV_NAME}" | grep running -o)
         if [ "${syno_status}" = 'running' ] ; then
-            timeout "${SYNO_SERVICE_TIMEOUT}" synoservicectl --stop "${SYNO_DOCKER_SERV_NAME}"
+            timeout --foreground "${SYNO_SERVICE_TIMEOUT}" synoservicectl --stop "${SYNO_DOCKER_SERV_NAME}"
             syno_status=$(synoservicectl --status "${SYNO_DOCKER_SERV_NAME}" | grep stop -o)
             if [ "${syno_status}" != 'stop' ] ; then
                 terminate "Could not stop Docker daemon"
@@ -557,7 +560,8 @@ execute_stop_syno() {
 }
 
 #======================================================================================================================
-# Creates a backup of the current Docker binaries (including Docker Compose) and Docker daemon configuration.
+# Creates a backup of the current Docker binaries (including Docker Compose), Docker daemon configuration, and
+# the 'start-stop-status' script.
 #======================================================================================================================
 # Globals:
 #   - backup_dir
@@ -568,7 +572,8 @@ execute_stop_syno() {
 execute_backup() {
     print_status "Backing up current Docker binaries (${backup_dir}/${docker_backup_filename})"
     cd "${backup_dir}" || terminate "Backup directory does not exist"
-    tar -czvf "${docker_backup_filename}" -C "$SYNO_DOCKER_BIN_PATH" bin -C "$SYNO_DOCKER_JSON_PATH" "dockerd.json"
+    tar -czvf "${docker_backup_filename}" -C "$SYNO_DOCKER_BIN_PATH" bin -C "$SYNO_DOCKER_JSON_PATH" "dockerd.json" \
+        -C "${SYNO_DOCKER_SCRIPT_PATH}" "start-stop-status"
     if [ ! -f "${docker_backup_filename}" ] ; then
         terminate "Backup issue"
     fi
@@ -700,7 +705,9 @@ execute_install_bin() {
         if [ "${skip_compose_update}" = 'false' ] ; then
             cp "${download_dir}"/docker-compose "${SYNO_DOCKER_BIN}"/docker-compose
         fi
+        chown root:root "${SYNO_DOCKER_BIN}"/*
         chmod +x "${SYNO_DOCKER_BIN}"/*
+        mkdir -p /var/lib/docker/volumes  # creates folder to improve compatability for some containers
     else
         echo "Skipping installation in STAGE mode"
     fi
@@ -719,6 +726,7 @@ execute_restore_bin() {
     print_status "Restoring binaries"
     if [ "${stage}" = 'false' ] ; then
         cp "${temp_dir}"/docker/* "${SYNO_DOCKER_BIN}"/
+        chown root:root "${SYNO_DOCKER_BIN}"/*
         chmod +x "${SYNO_DOCKER_BIN}"/*
     else
         echo "Skipping restore in STAGE mode"
@@ -747,6 +755,27 @@ execute_update_log() {
 }
 
 #======================================================================================================================
+# Updates Synology's start-stop-status script for Docker to ensure IP forwarding is enabled, unless 'stage' is set to 
+# true.
+#======================================================================================================================
+# Globals:
+#   - stage
+# Outputs:
+#   Updated start-stop-status script.
+#======================================================================================================================
+execute_update_script() {
+    print_status "Enabling IP forwarding"
+    if [ "${stage}" = 'false' ] ; then
+        if ! grep -q 'iptables -P FORWARD ACCEPT' "${SYNO_DOCKER_SCRIPT}"; then
+            match='# start docker'
+            sed -i "s/${match}/${SYNO_DOCKER_SCRIPT_FORWARDING}\n\t\t${match}/" "${SYNO_DOCKER_SCRIPT}"
+        fi
+    else
+        echo "Skipping configuration in STAGE mode"
+    fi
+}
+
+#======================================================================================================================
 # Restores the Docker daemon log driver extracted from a backup archive, unless 'stage' is set to true.
 #======================================================================================================================
 # Globals:
@@ -765,6 +794,24 @@ execute_restore_log() {
 }
 
 #======================================================================================================================
+# Restores Synology's Docker start-stop-status script from a backup archive, unless 'stage' is set to true.
+#======================================================================================================================
+# Globals:
+#   - stage
+#   - temp_dir
+# Outputs:
+#   Updated start-stop-status script.
+#======================================================================================================================
+execute_restore_script() {
+    print_status "Restoring start-stop-status script"
+    if [ "${stage}" = 'false' ] ; then
+        cp "${temp_dir}"/start-stop-status "${SYNO_DOCKER_SCRIPT}"
+    else
+        echo "Skipping restoring in STAGE mode"
+    fi
+}
+
+#======================================================================================================================
 # Start the Docker daemon by invoking 'synoservicectl', unless 'stage' is set to true.
 #======================================================================================================================
 # Globals:
@@ -777,7 +824,7 @@ execute_start_syno() {
     print_status "Starting Docker service"
 
     if [ "${stage}" = 'false' ] ; then
-        timeout "${SYNO_SERVICE_TIMEOUT}" synoservicectl --start "${SYNO_DOCKER_SERV_NAME}"
+        timeout --foreground "${SYNO_SERVICE_TIMEOUT}" synoservicectl --start "${SYNO_DOCKER_SERV_NAME}"
 
         syno_status=$(synoservicectl --status "${SYNO_DOCKER_SERV_NAME}" | grep running -o)
         if [ "${syno_status}" != 'running' ] ; then
@@ -899,7 +946,7 @@ main() {
             execute_download_compose
             ;;
         install )
-            total_steps=6
+            total_steps=7
             detect_current_versions
             execute_prepare
             define_target_download
@@ -909,10 +956,11 @@ main() {
             execute_extract_bin
             execute_install_bin
             execute_update_log
+            execute_update_script
             execute_start_syno
             ;;
         restore )
-            total_steps=5
+            total_steps=6
             detect_current_versions
             execute_prepare
             define_restore
@@ -921,10 +969,11 @@ main() {
             execute_stop_syno
             execute_restore_bin
             execute_restore_log
+            execute_restore_script
             execute_start_syno
             ;;
         update )
-            total_steps=9
+            total_steps=10
             detect_current_versions
             execute_prepare
             define_target_version
@@ -937,6 +986,7 @@ main() {
             execute_extract_bin
             execute_install_bin
             execute_update_log
+            execute_update_script
             execute_start_syno
             execute_clean
             ;;
