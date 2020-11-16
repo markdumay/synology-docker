@@ -548,7 +548,7 @@ execute_stop_syno() {
     if [ "${stage}" = 'false' ] ; then
         syno_status=$(synoservicectl --status "${SYNO_DOCKER_SERV_NAME}" | grep running -o)
         if [ "${syno_status}" = 'running' ] ; then
-            timeout "${SYNO_SERVICE_TIMEOUT}" synoservicectl --stop "${SYNO_DOCKER_SERV_NAME}"
+            timeout --foreground "${SYNO_SERVICE_TIMEOUT}" synoservicectl --stop "${SYNO_DOCKER_SERV_NAME}"
             syno_status=$(synoservicectl --status "${SYNO_DOCKER_SERV_NAME}" | grep stop -o)
             if [ "${syno_status}" != 'stop' ] ; then
                 terminate "Could not stop Docker daemon"
@@ -824,7 +824,7 @@ execute_start_syno() {
     print_status "Starting Docker service"
 
     if [ "${stage}" = 'false' ] ; then
-        timeout "${SYNO_SERVICE_TIMEOUT}" synoservicectl --start "${SYNO_DOCKER_SERV_NAME}"
+        timeout --foreground "${SYNO_SERVICE_TIMEOUT}" synoservicectl --start "${SYNO_DOCKER_SERV_NAME}"
 
         syno_status=$(synoservicectl --status "${SYNO_DOCKER_SERV_NAME}" | grep running -o)
         if [ "${syno_status}" != 'running' ] ; then
