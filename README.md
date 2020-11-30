@@ -133,14 +133,7 @@ Under the hood, the five different commands invoke a specific workflow or sequen
 | `-s`        | `--stage`   |            | Stage only, do not replace binaries or the configuration of log driver |
 
 ### Known Issues
-Using *Synology-Docker* to update your Synology Docker package is known to bring a few issues. They are listed below, including their workaround if available.
-
-* **Docker returns "failed to initialize logging driver" after updating** - Synology implemented a custom logging driver called `db`, which is not supported by the Docker binaries installed by `syno_docker_update.sh`. The script updates the default logging driver to `json-file` to address this. However, containers that were started prior to the update might still refer to the now obsolete `db` driver. Removing and restarting the container(s) should fix the error.
-* **Containers cannot be reached in user-defined bridge mode** (see [issue #35][issue_bridge]) - Setting up Docker on your Synology with the synology-docker script might result in difficulty connecting with containers in user-defined bridge mode. The default bridge network should work. Potential workarounds are to deploy your services in a Docker stack, to setup a [macvlan][macvlan] network, or to use host networking.
-* **The update is incompatible with BTRFS volumes** (see [issue #22][issue_btrfs]) - Launching containers could result in an error `Failed to create btrfs snapshot: inappropriate ioctl for device` on volumes formatted with BTRFS. No workaround is available yet.
-* **Docker service can be prevented from shutting down properly** (see [issue #20][issue_timeout]) - The `synoservicectl` daemon does not always terminate as expected, possibly due to a conflict with Docker's live restore functionality. Home Assistant is a known example to use live restore. Manually shutting down the container(s) will ensure *Synology-Docker* runs correctly.
-* **Containers cannot be launched via Docker UI** (see [issue #21][issue_launch]) - The Synology Docker package comes with a user interface (UI) to monitor and launch containers. Unfortunately, the launching of containers via the UI no longer works after having upgraded Docker with *Synology-Docker*. This could be caused by the specific Docker logging driver of Synology. Launching containers from the command line (via either Docker or Docker Compose) still works. [Portainer][portainer] could also be an alternative, but has not been tested by the author yet.
-
+This [link][known_issues] contains an overview of known issues, including available workarounds.
 
 ## Contributing
 1. Clone the repository and create a new branch 
@@ -151,7 +144,7 @@ Using *Synology-Docker* to update your Synology Docker package is known to bring
 3. Submit a Pull Request with a comprehensive description of the changes
 
 ## Credits
-*Synology-Docker* is inspired by this [gist][gist_mikado8231] by Mikado8231 to update Docker on Synology.
+*Synology-Docker* is inspired by this [gist][gist_mikado8231] from Mikado8231.
 
 ## Donate
 <a href="https://www.buymeacoffee.com/markdumay" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/lato-orange.png" alt="Buy Me A Coffee" style="height: 51px !important;width: 217px !important;"></a>
@@ -179,10 +172,7 @@ Copyright © [Mark Dumay][blog]
 [swarm_init]: https://docs.docker.com/engine/reference/commandline/swarm_init/
 [xfelix_letsencrypt]: https://www.xfelix.com/2017/06/synology-letsencrypt-dns-01-cert-issue-and-install/
 [portainer]: https://www.portainer.io
-[issue_bridge]: https://github.com/markdumay/synology-docker/issues/35
-[issue_timeout]: https://github.com/markdumay/synology-docker/issues/20
-[issue_launch]: https://github.com/markdumay/synology-docker/issues/21
-[issue_btrfs]: https://github.com/markdumay/synology-docker/issues/22
+[known_issues]: https://github.com/markdumay/synology-docker/issues/42
 [macvlan]: [https://blog.oddbit.com/post/2018-03-12-using-docker-macvlan-networks/]
 
 
