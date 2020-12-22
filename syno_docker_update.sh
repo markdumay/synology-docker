@@ -56,6 +56,7 @@ download_dir="${temp_dir}"
 docker_backup_filename="docker_backup_$(date +%Y%m%d_%H%M%S).tgz"
 skip_docker_update='false'
 skip_compose_update='false'
+skip_driver_update='false'
 force='false'
 stage='false'
 command=''
@@ -97,6 +98,7 @@ usage() {
     echo "  install [PATH]         Update Docker and Docker Compose from files on PATH"
     echo "  restore                Restore Docker and Docker Compose from backup"
     echo "  update                 Update Docker and Docker Compose to target version (creates backup first)"
+    echo "  validate               Validates versions available for update"
     echo
 }
 
@@ -167,6 +169,8 @@ detect_current_versions() {
 #   - dsm_version
 #   - docker_version
 #   - compose_version
+#   - skip_docker_update
+#   - skip_compose_update
 # Outputs:
 #   Terminates with non-zero exit code if host is incompatible.
 #======================================================================================================================
@@ -183,12 +187,12 @@ validate_current_version() {
     fi
 
     # Test Docker version is present, exit otherwise
-    if [ -z "${docker_version}" ] ; then
+    if [ -z "${docker_version}" ] && [ "${skip_docker_update}" = 'false' ] ; then
         terminate "Could not detect current Docker version, use --force to override"
     fi
 
     # Test Docker Compose version is present, exit otherwise
-    if [ -z "${compose_version}" ] ; then
+    if [ -z "${compose_version}" ] && [ "${skip_compose_update}" = 'false' ]; then
         terminate "Could not detect current Docker Compose version, use --force to override"
     fi
 }
@@ -219,12 +223,14 @@ detect_available_downloads() {
 # Globals:
 #   - target_docker_version
 #   - target_compose_version
+#   - skip_docker_update
+#   - skip_compose_update
 # Outputs:
 #   Updated 'target_docker_version' and 'target_compose_version'.
 #======================================================================================================================
 detect_available_versions() {
     # Detect latest available Docker version
-    if [ -z "${target_docker_version}" ] ; then
+    if [ -z "${target_docker_version}" ] && [ "${skip_docker_update}" = 'false' ] ; then
         docker_bin_files=$(curl -s "${DOWNLOAD_DOCKER}/" | grep -Eo '>docker-[0-9]*.[0-9]*.[0-9]*(-ce)?.tgz' | \
             cut -c 2-)
         latest_docker_bin=$(echo "${docker_bin_files}" | sort -bt. -k1,1 -k2,2n -k3,3n -k4,4n -k5,5n | tail -1)
@@ -237,7 +243,7 @@ detect_available_versions() {
     fi
 
     # Detect latest available stable Docker Compose version (ignores release candidates)
-    if [ -z "${target_compose_version}" ] ; then
+    if [ -z "${target_compose_version}" ] && [ "${skip_compose_update}" = 'false' ] ; then
         target_compose_version=$(curl -s "${GITHUB_API_COMPOSE}" | grep "tag_name" | grep -Eo "[0-9]+.[0-9]+.[0-9]+")
 
         if [ -z "${target_compose_version}" ] ; then
@@ -253,17 +259,19 @@ detect_available_versions() {
 # Globals:
 #   - target_docker_version
 #   - target_compose_version
+#   - skip_docker_update
+#   - skip_compose_update
 # Outputs:
 #   Terminates with non-zero exit code if target version is unavailable for either Docker or Docker Compose.
 #======================================================================================================================
 validate_available_versions() {
     # Test Docker is available for download, exit otherwise
-    if [ -z "${target_docker_version}" ] ; then
+    if [ -z "${target_docker_version}" ] && [ "${skip_docker_update}" = 'false' ] ; then
         terminate "Could not find Docker binaries for downloading"
     fi
 
     # Test Docker Compose is available for download, exit otherwise
-    if [ -z "${target_compose_version}" ] ; then
+    if [ -z "${target_compose_version}" ] && [ "${skip_compose_update}" = 'false' ] ; then
         terminate "Could not find Docker Compose binaries for downloading"
     fi
 }
@@ -277,24 +285,26 @@ validate_available_versions() {
 #   - download_dir
 #   - target_docker_version
 #   - target_compose_version
+#   - skip_docker_update
+#   - skip_compose_update
 # Outputs:
 #   Terminates with non-zero exit code if downloaded files for either Docker or Docker Compose are unavailable.
 #======================================================================================================================
 validate_downloaded_versions() {
     # Test Docker archive is available on path
     target_docker_bin="docker-${target_docker_version}.tgz"
-    if [ ! -f "${download_dir}/${target_docker_bin}" ] ; then
+    if [ ! -f "${download_dir}/${target_docker_bin}" ] && [ "${skip_docker_update}" = 'false' ] ; then
         terminate "Could not find Docker archive (${download_dir}/${target_docker_bin})"
     fi
 
     # Test Docker-compose binary is available on path
-    if [ ! -f "${download_dir}/docker-compose" ] ; then 
+    if [ ! -f "${download_dir}/docker-compose" ] && [ "${skip_compose_update}" = 'false' ] ; then 
         terminate "Could not find Docker compose binary (${download_dir}/docker-compose)"
     fi
 }
 
 #======================================================================================================================
-# Validates if a provided version string conforms to the expected pattern. The pattern should resemble 
+# Validates if a provided version string conforms to the expected SemVer pattern. The pattern should resemble 
 # 'major.minor.revision'. For example, '6.2.3' is a valid version string, while '6.1' is not.
 #======================================================================================================================
 # Arguments:
@@ -417,6 +427,9 @@ validate_provided_backup_path() {
 #======================================================================================================================
 # Globals:
 #   - target
+#   - skip_docker_update
+#   - skip_compose_update
+#   - skip_driver_update
 # Arguments:
 #   $1 - Error message when target is invalid
 # Outputs:
@@ -424,7 +437,25 @@ validate_provided_backup_path() {
 #======================================================================================================================
 validate_target() {
     case "${target}" in
-        all | engine | compose | driver )
+        all ) 
+            skip_docker_update='false'
+            skip_compose_update='false'
+            skip_driver_update='false'
+            ;;
+        engine )
+            skip_docker_update='false'
+            skip_compose_update='true'
+            skip_driver_update='true'
+            ;;
+        compose )
+            skip_docker_update='true'
+            skip_compose_update='false'
+            skip_driver_update='true'
+            ;;
+        driver )
+            skip_docker_update='true'
+            skip_compose_update='true'
+            skip_driver_update='false'
             ;;
         * )
             usage
@@ -455,11 +486,11 @@ define_update() {
             [ "${compose_version}" = "${target_compose_version}" ] ; then
             terminate "Already on target version for Docker and Docker Compose"
         fi
-        if [ "${docker_version}" = "${target_docker_version}" ] ; then
+        if [ "${docker_version}" = "${target_docker_version}" ] && [ "${skip_docker_update}" = 'false' ] ; then
             skip_docker_update='true'
             total_steps=$((total_steps-1))
         fi
-        if [ "${compose_version}" = "${target_compose_version}" ] ; then
+        if [ "${compose_version}" = "${target_compose_version}" ] && [ "${skip_compose_update}" = 'false' ]; then
             skip_compose_update='true'
             total_steps=$((total_steps-1))
         fi
@@ -487,11 +518,13 @@ define_restore() {
 # Globals:
 #   - target_compose_version
 #   - target_docker_version
+#   - skip_docker_update
+#   - skip_compose_update
 #======================================================================================================================
 define_target_version() {
     detect_available_versions
-    echo "Target Docker version: ${target_docker_version:-Unknown}"
-    echo "Target Docker Compose version: ${target_compose_version:-Unknown}"
+    [ "${skip_docker_update}" = 'false' ] && echo "Target Docker version: ${target_docker_version:-Unknown}"
+    [ "${skip_compose_update}" = 'false' ] && echo "Target Docker Compose version: ${target_compose_version:-Unknown}"
     validate_available_versions
 }
 
@@ -501,11 +534,13 @@ define_target_version() {
 #======================================================================================================================
 # Globals:
 #   - target_docker_version
+#   - skip_docker_update
+#   - skip_compose_update
 #======================================================================================================================
 define_target_download() {
     detect_available_downloads
-    echo "Target Docker version: ${target_docker_version:-Unknown}"
-    echo "Target Docker Compose version: Unknown"
+    [ "${skip_docker_update}" = 'false' ] && echo "Target Docker version: ${target_docker_version:-Unknown}"
+    [ "${skip_compose_update}" = 'false' ] && echo "Target Docker Compose version: Unknown"
     validate_downloaded_versions
 }
 
@@ -514,6 +549,9 @@ define_target_download() {
 #======================================================================================================================
 # Globals:
 #   - force
+#   - skip_docker_update
+#   - skip_compose_update
+#   - skip_driver_update
 # Outputs:
 #   Terminates with zero exit code if user does not confirm the operation.
 #======================================================================================================================
@@ -521,9 +559,9 @@ confirm_operation() {
     if [ "${force}" != 'true' ] ; then
         echo
         echo "WARNING! This will replace:"
-        echo "  - Docker Engine"
-        echo "  - Docker Compose"
-        echo "  - Docker daemon log driver"
+        [ "${skip_docker_update}" = "false" ]  && echo "  - Docker Engine"
+        [ "${skip_compose_update}" = "false" ] && echo "  - Docker Compose"
+        [ "${skip_driver_update}" = "false" ]  && echo "  - Docker daemon log driver"
         echo
 
         while true; do
@@ -742,13 +780,26 @@ execute_install_bin() {
 # Globals:
 #   - stage
 #   - temp_dir
+#   - skip_docker_update
+#   - skip_compose_update
 # Outputs:
 #   Restored Docker and Docker Compose binaries.
 #======================================================================================================================
+# TODO: validate this function
 execute_restore_bin() {
     print_status "Restoring binaries"
     if [ "${stage}" = 'false' ] ; then
-        cp "${temp_dir}"/docker/* "${SYNO_DOCKER_BIN}"/
+        if [ "${skip_docker_update}" = 'true' ] && [ "${skip_compose_update}" = 'true' ] ; then
+            echo "Skipping restore of binaries"
+        fi
+        # copy Docker Engine binaries
+        if [ "${skip_docker_update}" = 'false' ] ; then
+            find "${temp_dir}"/docker/ -type f \( ! -name docker-compose \) -print -exec cp -rpf '{}' "${SYNO_DOCKER_BIN}"/ ";"      
+        fi
+        # copy Docker Compose
+        if [ "${skip_compose_update}" = 'false' ] ; then
+            cp "${temp_dir}"/docker/docker-compose "${SYNO_DOCKER_BIN}"/
+        fi
         chown root:root "${SYNO_DOCKER_BIN}"/*
         chmod +x "${SYNO_DOCKER_BIN}"/*
     else
@@ -761,19 +812,20 @@ execute_restore_bin() {
 #======================================================================================================================
 # Globals:
 #   - stage
+#   - skip_driver_update
 # Outputs:
 #   Updated Docker daemon configuration.
 #======================================================================================================================
 execute_update_log() {
     print_status "Configuring log driver"
-    if [ "${stage}" = 'false' ] ; then
+    if [ "${stage}" = 'false' ] && [ "${skip_driver_update}" = 'false' ] ; then
         log_driver=$(grep "json-file" "${SYNO_DOCKER_JSON}")
         if [ ! -f "${SYNO_DOCKER_JSON}" ] || [ -z "${log_driver}" ] ; then
             mkdir -p "${SYNO_DOCKER_JSON_PATH}"
             echo "${SYNO_DOCKER_JSON_CONFIG}" > "${SYNO_DOCKER_JSON}"
         fi
     else
-        echo "Skipping configuration in STAGE mode"
+        echo "Skipping configuration in STAGE mode or TARGET mode"
     fi
 }
 
@@ -804,15 +856,16 @@ execute_update_script() {
 # Globals:
 #   - stage
 #   - temp_dir
+#   - skip_driver_update
 # Outputs:
 #   Updated Docker daemon configuration.
 #======================================================================================================================
 execute_restore_log() {
     print_status "Restoring log driver"
-    if [ "${stage}" = 'false' ] ; then
+    if [ "${stage}" = 'false' ] && [ "${skip_driver_update}" = 'false' ] ; then
         cp "${temp_dir}"/dockerd.json "${SYNO_DOCKER_JSON}"
     else
-        echo "Skipping restoring in STAGE mode"
+        echo "Skipping restoring in STAGE mode or TARGET mode"
     fi
 }
 
@@ -830,7 +883,7 @@ execute_restore_script() {
     if [ "${stage}" = 'false' ] ; then
         cp "${temp_dir}"/start-stop-status "${SYNO_DOCKER_SCRIPT}"
     else
-        echo "Skipping restoring in STAGE mode"
+        echo "Skipping restoring in STAGE mode or TARGET mode"
     fi
 }
 
@@ -939,7 +992,7 @@ main() {
                 target="$1"
                 validate_target "Invalid target"
                 ;;
-            backup | restore | update | parse )
+            backup | restore | update | validate )
                 command="$1"
                 ;;
             download | install )
@@ -957,10 +1010,6 @@ main() {
 
     # Execute workflows
     case "${command}" in
-        parse )
-            total_steps=1
-            detect_current_versions
-            ;;
         backup )
             total_steps=3
             detect_current_versions
@@ -1021,6 +1070,12 @@ main() {
             execute_update_script
             execute_start_syno
             execute_clean
+            ;;
+        validate )
+            total_steps=3
+            detect_current_versions
+            define_target_version
+            define_update
             ;;
         * )
             usage
