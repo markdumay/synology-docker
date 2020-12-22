@@ -4,8 +4,8 @@
 # Title         : syno_docker_update.sh
 # Description   : An Unofficial Script to Update or Restore Docker Engine and Docker Compose on Synology
 # Author        : Mark Dumay
-# Date          : November 16th, 2020
-# Version       : 1.2.0
+# Date          : December 22nd, 2020
+# Version       : 1.3.0
 # Usage         : sudo ./syno_docker_update.sh [OPTIONS] COMMAND
 # Repository    : https://github.com/markdumay/synology-docker.git
 # License       : MIT - https://github.com/markdumay/synology-docker/blob/master/LICENSE
@@ -59,6 +59,7 @@ skip_compose_update='false'
 force='false'
 stage='false'
 command=''
+target='all'
 target_docker_version=''
 target_compose_version=''
 backup_filename_flag='false'
@@ -88,6 +89,7 @@ usage() {
     echo "  -f, --force            Force update (bypass compatibility check and confirmation check)"
     echo "  -p, --path PATH        Path of the backup (defaults to '${backup_dir}')"
     echo "  -s, --stage            Stage only, do not actually replace binaries or configuration of log driver"
+    echo "  -t, --target           Target to update, either 'all' (default), 'engine', 'compose', or 'driver'"
     echo
     echo "Commands:"
     echo "  backup                 Create a backup of Docker and Docker Compose binaries and dockerd configuration"
@@ -407,6 +409,27 @@ validate_provided_backup_path() {
         usage
         terminate "$3"
     fi
+}
+
+#======================================================================================================================
+# Validates if the specified target is supported. Supported targets are 'all', 'engine', 'compose', or 'driver'. If no
+# target is specified, the default value is 'all'. The validation is case sensitive.
+#======================================================================================================================
+# Globals:
+#   - target
+# Arguments:
+#   $1 - Error message when target is invalid
+# Outputs:
+#   Terminates with non-zero exit code if the specified target is invalid.
+#======================================================================================================================
+validate_target() {
+    case "${target}" in
+        all | engine | compose | driver )
+            ;;
+        * )
+            usage
+            terminate "$1"
+    esac
 }
 
 #======================================================================================================================
@@ -911,7 +934,12 @@ main() {
             -s | --stage )
                 stage='true'
                 ;;
-            backup | restore | update )
+            -t | --target )
+                shift
+                target="$1"
+                validate_target "Invalid target"
+                ;;
+            backup | restore | update | parse )
                 command="$1"
                 ;;
             download | install )
@@ -929,6 +957,10 @@ main() {
 
     # Execute workflows
     case "${command}" in
+        parse )
+            total_steps=1
+            detect_current_versions
+            ;;
         backup )
             total_steps=3
             detect_current_versions
