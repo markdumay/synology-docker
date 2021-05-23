@@ -57,6 +57,7 @@ The project uses [Docker][docker_url], a lightweight virtualization application.
 
 * **Docker is required** - *Synology-Docker* updates the binaries of an existing Docker installation only. Install Docker on your NAS in DSM via `Package Center ➡ All Packages ➡ Docker` and ensure the status is `Running`.
 
+* **SynoCommunity/Git is required** - *Synology-Docker* needs the [Git package](https://synocommunity.com/package/git) from [SynoCommunity](https://synocommunity.com) installed on your NAS. Install Git on your NAS by adding the SynoCommunity package repository (described [here](https://synocommunity.com/#easy-install)) and installing the Git package in DSM via `Package Center ➡ Community ➡ Git`.
 
 ## Deployment
 Deployment of *Synology-Docker* is a matter of cloning the GitHub repository. Login to your NAS terminal via SSH first. Assuming you are in the working folder of your choice, clone the repository files. Git automatically creates a new folder `synology-docker` and copies the files to this directory. Then change your current folder to simplify the execution of the shell script.
