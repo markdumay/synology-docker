@@ -4,8 +4,8 @@
 # Title         : syno_docker_update.sh
 # Description   : An Unofficial Script to Update or Restore Docker Engine and Docker Compose on Synology
 # Author        : Mark Dumay
-# Date          : May 23rd, 2021
-# Version       : 1.3.1
+# Date          : September 17th, 2021
+# Version       : 1.4.0
 # Usage         : sudo ./syno_docker_update.sh [OPTIONS] COMMAND
 # Repository    : https://github.com/markdumay/synology-docker.git
 # License       : MIT - https://github.com/markdumay/synology-docker/blob/master/LICENSE
@@ -20,13 +20,14 @@ readonly RED='\e[31m' # Red color
 readonly NC='\e[m' # No color / reset
 readonly BOLD='\e[1m' # Bold font
 readonly DSM_SUPPORTED_VERSION=6
-readonly DEFAULT_DOCKER_VERSION='20.10.6'
+readonly DEFAULT_DOCKER_VERSION='20.10.8'
 readonly DEFAULT_COMPOSE_VERSION='1.29.2'
 readonly CPU_ARCH='x86_64'
 readonly DOWNLOAD_DOCKER="https://download.docker.com/linux/static/stable/${CPU_ARCH}"
 readonly DOWNLOAD_GITHUB='https://github.com/docker/compose'
 readonly GITHUB_API_COMPOSE='https://api.github.com/repos/docker/compose/releases/latest'
-readonly SYNO_DOCKER_SERV_NAME='pkgctl-Docker'
+readonly SYNO_DOCKER_SERV_NAME6='pkgctl-Docker'
+readonly SYNO_DOCKER_SERV_NAME7='Docker'
 readonly SYNO_SERVICE_TIMEOUT='5m'
 readonly SYNO_DOCKER_DIR='/var/packages/Docker'
 readonly SYNO_DOCKER_BIN_PATH="${SYNO_DOCKER_DIR}/target/usr"
@@ -181,9 +182,9 @@ validate_current_version() {
         terminate "This script supports ${CPU_ARCH} CPUs only, use --force to override"
     fi
 
-    # Test if host is DSM 6, exit otherwise
-    if [ "${dsm_major_version}" != "${DSM_SUPPORTED_VERSION}" ] ; then
-        terminate "This script supports DSM 6.x only, use --force to override"
+    # Test if host is DSM 6 or later, exit otherwise
+    if [ "${dsm_major_version}" -lt "${DSM_SUPPORTED_VERSION}" ] ; then
+        terminate "This script supports DSM 6.x or later only, use --force to override"
     fi
 
     # Test Docker version is present, exit otherwise
@@ -596,7 +597,7 @@ execute_prepare() {
 }
 
 #======================================================================================================================
-# Stops a running Docker daemon by invoking 'synoservicectl', unless 'stage' is set to true.
+# Stops a running Docker daemon by invoking 'synoservicectl' or 'synopkg', unless 'stage' is set to true.
 #======================================================================================================================
 # Globals:
 #   - stage
@@ -607,14 +608,30 @@ execute_stop_syno() {
     print_status "Stopping Docker service"
 
     if [ "${stage}" = 'false' ] ; then
-        syno_status=$(synoservicectl --status "${SYNO_DOCKER_SERV_NAME}" | grep running -o)
-        if [ "${syno_status}" = 'running' ] ; then
-            timeout --foreground "${SYNO_SERVICE_TIMEOUT}" synoservicectl --stop "${SYNO_DOCKER_SERV_NAME}"
-            syno_status=$(synoservicectl --status "${SYNO_DOCKER_SERV_NAME}" | grep stop -o)
-            if [ "${syno_status}" != 'stop' ] ; then
-                terminate "Could not stop Docker daemon"
-            fi
-        fi
+        case "${dsm_major_version}" in
+            "6")
+                syno_status=$(synoservicectl --status "${SYNO_DOCKER_SERV_NAME6}" | grep running -o)
+                if [ "${syno_status}" = 'running' ] ; then
+                    timeout --foreground "${SYNO_SERVICE_TIMEOUT}" synoservicectl --stop "${SYNO_DOCKER_SERV_NAME6}"
+                    syno_status=$(synoservicectl --status "${SYNO_DOCKER_SERV_NAME6}" | grep stop -o)
+                    if [ "${syno_status}" != 'stop' ] ; then
+                        terminate "Could not stop Docker daemon"
+                    fi
+                fi
+                ;;
+            "7")
+                syno_status=$(synopkg status "${SYNO_DOCKER_SERV_NAME7}" | grep started -o)
+                if [ "${syno_status}" = 'started' ] ; then
+                    timeout --foreground "${SYNO_SERVICE_TIMEOUT}" synopkg stop "${SYNO_DOCKER_SERV_NAME7}"
+                    syno_status=$(synopkg status "${SYNO_DOCKER_SERV_NAME7}" | grep stopped -o)
+                    if [ "${syno_status}" != 'stopped' ] ; then
+                        terminate "Could not stop Docker daemon"
+                    fi
+                fi
+                ;;
+            *)
+                echo "ERROR: Cannot start Docker package, unsupported DSM version: ${dsm_major_version}"
+        esac
     else
         echo "Skipping Docker service control in STAGE mode"
     fi
@@ -888,7 +905,7 @@ execute_restore_script() {
 }
 
 #======================================================================================================================
-# Start the Docker daemon by invoking 'synoservicectl', unless 'stage' is set to true.
+# Start the Docker daemon by invoking 'synoservicectl' or 'synopkg', unless 'stage' is set to true.
 #======================================================================================================================
 # Globals:
 #   - force
@@ -900,16 +917,34 @@ execute_start_syno() {
     print_status "Starting Docker service"
 
     if [ "${stage}" = 'false' ] ; then
-        timeout --foreground "${SYNO_SERVICE_TIMEOUT}" synoservicectl --start "${SYNO_DOCKER_SERV_NAME}"
+        case "${dsm_major_version}" in
+            "6")
+                timeout --foreground "${SYNO_SERVICE_TIMEOUT}" synoservicectl --start "${SYNO_DOCKER_SERV_NAME6}"
 
-        syno_status=$(synoservicectl --status "${SYNO_DOCKER_SERV_NAME}" | grep running -o)
-        if [ "${syno_status}" != 'running' ] ; then
-            if [ "${force}" != 'true' ] ; then
-                terminate "Could not bring Docker Engine back online"
-            else
-                echo "ERROR: Could not bring Docker Engine back online"
-            fi
-        fi
+                syno_status=$(synoservicectl --status "${SYNO_DOCKER_SERV_NAME6}" | grep running -o)
+                if [ "${syno_status}" != 'running' ] ; then
+                    if [ "${force}" != 'true' ] ; then
+                        terminate "Could not bring Docker Engine back online"
+                    else
+                        echo "ERROR: Could not bring Docker Engine back online"
+                    fi
+                fi
+                ;;
+            "7")
+                timeout --foreground "${SYNO_SERVICE_TIMEOUT}" synopkg start "${SYNO_DOCKER_SERV_NAME7}"
+
+                syno_status=$(synopkg status "${SYNO_DOCKER_SERV_NAME7}" | grep started -o)
+                if [ "${syno_status}" != 'started' ] ; then
+                    if [ "${force}" != 'true' ] ; then
+                        terminate "Could not bring Docker Engine back online"
+                    else
+                        echo "ERROR: Could not bring Docker Engine back online"
+                    fi
+                fi
+                ;;
+            *)
+                echo "ERROR: Cannot start Docker package, unsupported DSM version: ${dsm_major_version}"
+        esac
     else
         echo "Skipping Docker service control in STAGE mode"
     fi
