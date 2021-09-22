@@ -63,8 +63,8 @@ The project uses [Docker][docker_url], a lightweight virtualization application.
 Deployment of *Synology-Docker* is a matter of cloning the GitHub repository. Login to your NAS terminal via SSH first. Assuming you are in the working folder of your choice, clone the repository files. Git automatically creates a new folder `synology-docker` and copies the files to this directory. Then change your current folder to simplify the execution of the shell script.
 
 ```console
-git clone https://github.com/markdumay/synology-docker.git
-cd synology-docker
+$ git clone https://github.com/markdumay/synology-docker.git
+$ cd synology-docker
 ```
 
 <!-- TODO: TEST CHMOD -->
@@ -73,7 +73,7 @@ cd synology-docker
 *Synology-Docker* requires `sudo` rights. Use the following command to invoke *Synology-Docker* from the command line.
 
 ```console
-sudo ./syno_docker_update.sh [OPTIONS] COMMAND
+$ sudo ./syno_docker_update.sh [OPTIONS] COMMAND
 ```
 
 ### Commands
@@ -105,7 +105,7 @@ Under the hood, the five different commands invoke a specific workflow or sequen
 | M) | Start Docker daemon         | Step 3 |          | Step 6  | Step 6  | Step 9  |
 | N) | Clean temp folder           |        |          |         |         | Step 10 |
 
-* **A) Download Docker binary** - Downloads an archive containing Docker Engine binaries from `https://download.docker.com/linux/static/stable/x86_64/docker-${VERSION}.tgz`. The binaries are compatible with the Intel x86 (64 bit) architecture. Unless a specific version is specified by the `--docker` flag, *Synology-Docker` pulls the latest stable version available.
+* **A) Download Docker binary** - Downloads an archive containing Docker Engine binaries from `https://download.docker.com/linux/static/stable/x86_64/docker-${VERSION}.tgz`. The binaries are compatible with the Intel x86 (64 bit) architecture. Unless a specific version is specified by the `--docker` flag, *Synology-Docker* pulls the latest stable version available.
 * **B) Download Compose binary** - Downloads the Docker Compose binary from `https://github.com/docker/compose/releases/download/${VERSION}/docker-compose-Linux-x86_64`. Unless a specific version is specified by the `--compose` flag, *Synology-Docker* pulls the latest stable version available.
 * **C) Extract files from backup** - Extracts the files from a backup archive specified by the `--backup` flag to the temp directory (`/tmp/docker_update`). 
 * **D) Stop Docker daemon** - Stops the Docker daemon by invoking `synoservicectl --stop pkgctl-Docker`.
