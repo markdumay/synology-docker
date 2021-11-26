@@ -5,7 +5,7 @@
 # Description   : An Unofficial Script to Update or Restore Docker Engine and Docker Compose on Synology
 # Author        : Mark Dumay
 # Date          : November 26th, 2021
-# Version       : 1.4.1
+# Version       : 1.4.2
 # Usage         : sudo ./syno_docker_update.sh [OPTIONS] COMMAND
 # Repository    : https://github.com/markdumay/synology-docker.git
 # License       : MIT - https://github.com/markdumay/synology-docker/blob/master/LICENSE
@@ -153,7 +153,7 @@ detect_current_versions() {
     docker_version=$(docker -v 2>/dev/null | grep -Eo "[0-9]*.[0-9]*.[0-9]*," | cut -d',' -f 1)
 
     # Detect current Docker Compose version
-    compose_version=$(docker-compose -v 2>/dev/null | grep -Eo "[0-9]*.[0-9]*.[0-9]*," | cut -d',' -f 1)
+    compose_version=$(docker-compose -v 2>/dev/null | grep -Eo "v[0-9]+.[0-9]*.[0-9]*" | cut -c 2-)
 
     echo "Current DSM version: ${dsm_version:-Unknown}"
     echo "Current Docker version: ${docker_version:-Unknown}"
