@@ -4,8 +4,8 @@
 # Title         : syno_docker_update.sh
 # Description   : An Unofficial Script to Update or Restore Docker Engine and Docker Compose on Synology
 # Author        : Mark Dumay
-# Date          : September 17th, 2021
-# Version       : 1.4.0
+# Date          : November 26th, 2021
+# Version       : 1.4.1
 # Usage         : sudo ./syno_docker_update.sh [OPTIONS] COMMAND
 # Repository    : https://github.com/markdumay/synology-docker.git
 # License       : MIT - https://github.com/markdumay/synology-docker/blob/master/LICENSE
@@ -20,8 +20,8 @@ readonly RED='\e[31m' # Red color
 readonly NC='\e[m' # No color / reset
 readonly BOLD='\e[1m' # Bold font
 readonly DSM_SUPPORTED_VERSION=6
-readonly DEFAULT_DOCKER_VERSION='20.10.8'
-readonly DEFAULT_COMPOSE_VERSION='1.29.2'
+readonly DEFAULT_DOCKER_VERSION='20.10.11'
+readonly DEFAULT_COMPOSE_VERSION='2.1.1'
 readonly CPU_ARCH='x86_64'
 readonly DOWNLOAD_DOCKER="https://download.docker.com/linux/static/stable/${CPU_ARCH}"
 readonly DOWNLOAD_GITHUB='https://github.com/docker/compose'
@@ -741,7 +741,9 @@ execute_extract_backup() {
 }
 
 #======================================================================================================================
-# Downloads the targeted Docker Compose binary, unless instructed to skip the download.
+# Downloads the targeted Docker Compose binary, unless instructed to skip the download. As the download path has
+# changed since release of Docker Compose v2, this function checks the major version of the target binary and updates
+# the path accordingly.
 #======================================================================================================================
 # Globals:
 #   - download_dir
@@ -752,7 +754,15 @@ execute_extract_backup() {
 #======================================================================================================================
 execute_download_compose() {
     if [ "${skip_compose_update}" = 'false' ] ; then
-        compose_bin="${DOWNLOAD_GITHUB}/releases/download/${target_compose_version}/docker-compose-Linux-${CPU_ARCH}"
+        major_compose=$(echo "${target_compose_version}" | cut -d" " -f3 | cut -d "." -f1)
+        base_path="${DOWNLOAD_GITHUB}/releases/download"
+        # as of version 2, the download path uses a 'v' prefix and is in lower case
+        compose_bin="${base_path}/v${target_compose_version}/docker-compose-linux-${CPU_ARCH}"
+        if [ "${major_compose}" -lt 2 ] ; then
+            # below version 2, the download path does not use a 'v' prefix and uses sentence case for the platform
+            compose_bin="${base_path}/${target_compose_version}/docker-compose-Linux-${CPU_ARCH}"
+        fi
+
         print_status "Downloading target Docker Compose binary (${compose_bin})"
         response=$(curl -L "${compose_bin}" --write-out '%{http_code}' -o "${download_dir}/docker-compose")
         if [ "${response}" != 200 ] ; then 
