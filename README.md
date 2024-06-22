@@ -51,7 +51,7 @@ Detailed background information is available on the author's [personal blog][blo
 The project uses [Docker][docker_url], a lightweight virtualization application.
 
 ## Prerequisites
-*Synology-Docker* runs on a Synology NAS with DSM 6 or DSM 7. The script has been tested with a DS918+ running DSM 6.2.4-25556 and DSM 7.0.1-42218. Other prerequisites are:
+*Synology-Docker* runs on a Synology NAS with DSM 6 or DSM 7. The script has been tested with a DS918+ running DSM 6.2.4-25556, DSM 7.0.1-42218, and DSM 7.2.1-69057. Other prerequisites are:
 
 * **SSH admin access is required** - *Synology-Docker* runs as a shell script on the terminal. You can enable SSH access in DSM under `Control Panel ➡ Terminal & SNMP ➡ Terminal`.
 
@@ -69,12 +69,37 @@ $ cd synology-docker
 
 <!-- TODO: TEST CHMOD -->
 
+## Preparation before upgrade
+If you're using *compose* for your containers, I highly recommend that before you run the upgrade (or restore, if you're going back to the original version) you go through and stop each running container.
+```console
+$ cd /volume1/docker/{my_container}
+$ docker-compose down
+```
+Because this upgrade modifies the default logger for docker, stopping (removing) and re-starting each container is required, since the logging mechanism is persisted during a compose docker build / start. You don't HAVE to do this before the upgrade, however if you don't, you'll get errors related to the logger for your containers, and will have to stop and start each container / stack after the upgrade anyway.
+
+Stopping all the containers prior to the upgrade / restore will also make the upgrade a lot faster, since the service stop and restart normally has to do the work of stopping and starting all containers.
+
+For a convenient way of enumerating all of the running *compose* projects, you can execute the following:
+
+```console
+for c in $(docker ps -q); do \
+    docker inspect "$c" --format \
+    '{{.Name}} {{if index .Config.Labels "com.docker.compose.project.config_files"}}{{index .Config.Labels "com.docker.compose.project.config_files"}}{{else}}!---not_managed_by_compose---!{{end}}'; \
+done \
+| sort -u -t " " -k 2 \
+| column -t -N Container,Compose_Location
+```
+...if you see a container with `!---not_managed_by_compose---!` you'll need to make sure you know how to recreate this container after the upgrade.
+
+
 ## Usage
 *Synology-Docker* requires `sudo` rights. Use the following command to invoke *Synology-Docker* from the command line.
 
 ```console
 $ sudo ./syno_docker_update.sh [OPTIONS] COMMAND
 ```
+
+
 
 ### Commands
 *Synology-Docker* supports the following commands. 
@@ -113,11 +138,11 @@ Under the hood, the five different commands invoke a specific workflow or sequen
 * **F) Extract downloaded binaries** - Extracts the files from a downloaded archive to the temp directory (`/tmp/docker_update`). 
 * **G) Restore Docker binaries** - Restores the Docker binaries in `/var/packages/Docker/target/usr/bin/*` with the binaries extracted from a backup archive.
 * **H) Install Docker binaries** - Installs downloaded and extracted Docker binaries (including Docker Compose) to the folder `/var/packages/Docker/target/usr/bin/`.
-* **I) Update log driver** - Replaces Synology's log driver with a default log driver `json-file` to improve compatibility. The configuration is updated at `/var/packages/Docker/etc/dockerd.json`
+* **I) Update log driver** - Replaces Synology's log driver with a default log driver `local` to improve compatibility while optimizing writes and limiting log file growth. The configuration is updated at `/var/packages/Docker/etc/dockerd.json`
 * **J) Restore log driver** - Restores the log driver (`/var/packages/Docker/etc/dockerd.json`) from the configuration within a backup archive.
 * **K) Update Docker script** - Updates Synology's `start-stop-status` script for Docker to enable IP forwarding. This ensures containers can be properly reached in bridge networking mode. The script is updated at the location `/var/packages/Docker/scripts/start-stop-status`.
 * **L) Restore Docker script** - Restores the `start-stop-status` script (`/var/packages/Docker/scripts/start-stop-status`) from the file within a backup archive.
-* **M) Start Docker daemon** - Starts the Docker daemon by invoking `synoservicectl --start pkgctl-Docker`.
+* **M) Start Docker daemon** - Starts the Docker daemon by invoking `synoservicectl --start pkgctl-Docker` (or `synopkg start ContainerManager` on DSM 7).
 * **N) Clean temp folder** - Removes files from the temp directory (`/tmp/docker_update`). The temporary files are created when extracting a downloaded archive or extracting a backup.
 
 
